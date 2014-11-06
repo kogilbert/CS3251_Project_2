@@ -3,8 +3,8 @@ import java.net.*;
 
 public class RTP {
 
-	static void start(int port) throws SocketException{
-		DatagramSocket socket = new DatagramSocket(port);
+	static DatagramSocket start(int port) throws SocketException{
+		return new DatagramSocket(port);
 	}
 	
 	void connect(){

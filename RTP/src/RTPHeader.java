@@ -31,6 +31,7 @@ public class RTPHeader {
 		this.syn = false;
 		this.fin = false;
 		this.checksum = 0;
+		this.header = new byte[16];
 	}
 	
 	public byte[] setHeader(){
@@ -73,10 +74,15 @@ public class RTPHeader {
 	}
 	
 	public void headerFromArray(byte[] header){
-		this.sourcePort = (short)(header[0]<<8 & header[1]);
-		this.destPort = (short)(header[2] <<8 & header[3]);
-		this.seqNum = (int)(header[4]<<24 & header[5] << 16 & header[6] << 8 & header[7]);
-		this.ackNum = (int)(header[8]<<24 & header[9] << 16 & header[10] << 8 & header[11]);
+		this.sourcePort = (short)(header[0]<<8 | ((short)0 | 0xFF) & header[1]);
+		
+		System.out.println(header[0]<<8);
+		System.out.println(header[1]);
+		System.out.println(((short)0 | 0xFF) &header[1]);
+		
+		this.destPort = (short)(header[2]<<8 | ((short)0 | 0xFF) & header[3]);
+		this.seqNum = (int)(header[4]<<24 | header[5] << 16 | header[6] << 8 | ((short)0 | 0xFF) & header[7]);
+		this.ackNum = (int)(header[8]<<24 | header[9] << 16 | header[10] << 8 | ((short)0 | 0xFF) & header[11]);
 		if((byte)(header[13] & 0x1) == (byte)0x1){
 			this.fin = true;
 		}
@@ -95,7 +101,7 @@ public class RTPHeader {
 		if((byte)(header[13] & 0x10) == (byte)0x20){
 			this.urg = true;
 		}
-		this.checksum = (short)(header[14]<<8 & header[15]);
+		this.checksum = (short)(header[14]<<8 | ((short)0 | 0xFF) & header[15]);
 	}
 
 	public byte[] getHeader() {

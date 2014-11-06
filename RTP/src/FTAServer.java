@@ -26,7 +26,7 @@ public class FTAServer {
 		*/
 		
 		
-		RTP.start(servPort);
+		DatagramSocket socket = RTP.start(servPort);
 
 		
 		
@@ -35,7 +35,7 @@ public class FTAServer {
 
 		//int servPort = Integer.parseInt(args[0]);
 
-		DatagramSocket socket = new DatagramSocket(servPort);
+		//DatagramSocket socket = new DatagramSocket(servPort);
 		DatagramPacket packet = new DatagramPacket(new byte[BUFFERMAX],
 				BUFFERMAX);
 
@@ -47,6 +47,7 @@ public class FTAServer {
 					+ packet.getPort());
 			
 			RTPHeader header = new RTPHeader();
+		
 			header.headerFromArray(packet.getData());
 			
 			System.out.println("Soure port: " + header.getSourcePort() + "\n Dest Port: " + header.getDestPort() + " SYN : " + header.isSyn());

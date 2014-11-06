@@ -10,8 +10,8 @@ public class FTAClient {
 	public static void main(String[] args) throws IOException {
 		System.out.println("Welcome to the client, type 'connect(Port Number, Emulator IP, Emulator Port Number)");
 		Scanner sc = new Scanner(System.in);
-		String input = sc.nextLine();
-		System.out.println("you inputed " + input);
+		//String input = sc.nextLine();
+		//System.out.println("you inputed " + input);
 
 		/*
 		 * function Connect (Port num, Emulator IP, Emulator Port num) 
@@ -25,6 +25,7 @@ public class FTAClient {
 		
 		RTPHeader myHeader = new RTPHeader((short)4000, (short)4001, 0, 0);
 		myHeader.setSyn(true);
+		System.out.println("Source port: "+ myHeader.getSourcePort());
 		
 		
 
