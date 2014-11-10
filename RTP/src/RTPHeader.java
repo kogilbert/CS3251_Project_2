@@ -75,11 +75,6 @@ public class RTPHeader {
 	
 	public void headerFromArray(byte[] header){
 		this.sourcePort = (short)(header[0]<<8 | ((short)0 | 0xFF) & header[1]);
-		
-		System.out.println(header[0]<<8);
-		System.out.println(header[1]);
-		System.out.println(((short)0 | 0xFF) &header[1]);
-		
 		this.destPort = (short)(header[2]<<8 | ((short)0 | 0xFF) & header[3]);
 		this.seqNum = (int)(header[4]<<24 | header[5] << 16 | header[6] << 8 | ((short)0 | 0xFF) & header[7]);
 		this.ackNum = (int)(header[8]<<24 | header[9] << 16 | header[10] << 8 | ((short)0 | 0xFF) & header[11]);
@@ -201,6 +196,8 @@ public class RTPHeader {
 		this.checksum = checksum;
 	}
 	
-	
+	public String toString(){
+		return header.toString();
+	}
 
 }

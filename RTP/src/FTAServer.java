@@ -8,17 +8,18 @@ public class FTAServer {
 
 	public static void main(String[] args) throws IOException{
 		int servPort;
-		System.out.println("Welcome to the server, type 'connect(Port Number)");
-		Scanner sc = new Scanner(System.in);
-		String input = sc.nextLine();
-		System.out.println("you inputed " + input);
-		
-		int startIndex = input.indexOf('(');
-		int endIndex = input.indexOf(')');
-		String port = input.substring((startIndex + 1), endIndex);
-		System.out.println(port);
-		servPort = Integer.parseInt(port);
-		
+//		System.out.println("Welcome to the server, type 'connect(Port Number)");
+//		Scanner sc = new Scanner(System.in);
+//		String input = sc.nextLine();
+//		System.out.println("you inputed " + input);
+//		
+//		int startIndex = input.indexOf('(');
+//		int endIndex = input.indexOf(')');
+//		String port = input.substring((startIndex + 1), endIndex);
+//		System.out.println(port);
+	
+		servPort = Integer.parseInt(args[0]);
+		System.out.println("Server has been set up with port num: " + servPort);
 		/* functions
 		Start (Port num)
 		Window (w)
@@ -50,7 +51,7 @@ public class FTAServer {
 		
 			header.headerFromArray(packet.getData());
 			
-			System.out.println("Soure port: " + header.getSourcePort() + "\n Dest Port: " + header.getDestPort() + " SYN : " + header.isSyn());
+			System.out.println("Soure port: " + header.getSourcePort() + "\nDest Port: " + header.getDestPort() + "\nSYN : " + header.isSyn());
 			socket.send(packet);
 
 			// Once the datagram socket receive data the buffer will be reset to
