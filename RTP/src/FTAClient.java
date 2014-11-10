@@ -47,13 +47,17 @@ public class FTAClient {
 		RTPHeader myHeader = new RTPHeader((short)clientPort, (short)(clientPort+1), 0, 0);
 		myHeader.setSyn(true);
 		System.out.println("Source port: "+ myHeader.getSourcePort());
+		
+		byte[] header = myHeader.getHeader();
+		
+		byte[] data = args[2].getBytes();
 
 		/**
-		 * Start sending data ------------------------------------------------------------------------
+		 * Start sending and receiving data------------------------------------------------------------------------
 		 */
 		
 		// data to send
-		byte[] bytesToSend = myHeader.getHeader();
+		byte[] bytesToSend = RTP.packData(header, data);
 
 		// length of data
 		int dataLen = bytesToSend.length;
