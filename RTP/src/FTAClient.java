@@ -1,4 +1,8 @@
+import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -7,7 +11,8 @@ public class FTAClient {
 
 	//private static final int TIMEOUT = 3000;
 	//private static final int MAXTRIES = 5;
-
+	private static final int BUFFERMAX = 255;
+	
 	@SuppressWarnings("resource")
 	public static void main(String[] args) throws IOException {
 		System.out.println("Welcome to the client, type 'connect(Port Number, Emulator IP, Emulator Port Number)");
@@ -50,25 +55,40 @@ public class FTAClient {
 		
 		byte[] header = myHeader.getHeader();
 		
-		byte[] data = args[2].getBytes();
+		//byte[] data = args[2].getBytes();
 
 		/**
 		 * Start sending and receiving data------------------------------------------------------------------------
 		 */
 		
+		byte[] bytesToSend = new byte[BUFFERMAX];
+		
+		DatagramPacket sendPacket;
+		
+		DatagramPacket receivePacket;
+		
+		FileInputStream fileIn = new FileInputStream(args[2]);
+		byte[] payload = new byte[RTPHeader.getHeaderLen()];
+		while(fileIn.read(payload) != -1){
+			bytesToSend = RTP.packData(header, payload);
+			
+			sendPacket = new DatagramPacket(bytesToSend, payload.length,
+					serverAddress, servPort);
+			
+			socket.send(sendPacket);
+		}
+		
 		// data to send
-		byte[] bytesToSend = RTP.packData(header, data);
+		//byte[] bytesToSend = RTP.packData(header, data);
 
 		// length of data
 		int dataLen = bytesToSend.length;
 
 		// sending packet
-		DatagramPacket sendPacket = new DatagramPacket(bytesToSend, dataLen,
-				serverAddress, servPort);
+		sendPacket = new DatagramPacket(bytesToSend, dataLen, serverAddress, servPort);
 
 		// receive packet
-		DatagramPacket receivePacket = new DatagramPacket(new byte[dataLen],
-				dataLen);
+		receivePacket = new DatagramPacket(new byte[dataLen], dataLen);
 
 		socket.send(sendPacket);
 

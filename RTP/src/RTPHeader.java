@@ -4,7 +4,7 @@ public class RTPHeader {
 	short destPort;
 	int seqNum;
 	int ackNum;
-	final int headerLen = 17;
+	final static int headerLen = 17;
 	boolean urg;
 	boolean ack;
 	boolean psh;
@@ -198,7 +198,7 @@ public class RTPHeader {
 		this.checksum = checksum;
 	}
 	
-	public int getHeaderLen() {
+	static int getHeaderLen() {
 		return headerLen;
 	}
 
