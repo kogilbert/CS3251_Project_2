@@ -1,8 +1,6 @@
-import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -11,6 +9,7 @@ public class FTAClient {
 
 	//private static final int TIMEOUT = 3000;
 	//private static final int MAXTRIES = 5;
+	//576 - 20 -8 -16 = 531
 	private static final int BUFFERMAX = 255;
 	
 	@SuppressWarnings("resource")
@@ -67,34 +66,39 @@ public class FTAClient {
 		
 		DatagramPacket receivePacket;
 		
-		FileInputStream fileIn = new FileInputStream(args[2]);
-		byte[] payload = new byte[RTPHeader.getHeaderLen()];
-		while(fileIn.read(payload) != -1){
-			bytesToSend = RTP.packData(header, payload);
+		//int  filelen = (int) (new File(System.getProperty("user.dir") + "/" + args[2]).length());
+		
+		FileInputStream fileIn = new FileInputStream(System.getProperty("user.dir") + "/" + args[2]);
+		
+		byte[] payload = new byte[BUFFERMAX - RTPHeader.headerLen];
+		int payloadLen = fileIn.read(payload);
+		while( payloadLen != -1){
+			bytesToSend = RTP.packData(header, payload, payloadLen);
 			
-			sendPacket = new DatagramPacket(bytesToSend, payload.length,
+			sendPacket = new DatagramPacket(bytesToSend, bytesToSend.length,
 					serverAddress, servPort);
 			
 			socket.send(sendPacket);
+			payloadLen = fileIn.read(payload);
 		}
 		
 		// data to send
 		//byte[] bytesToSend = RTP.packData(header, data);
 
 		// length of data
-		int dataLen = bytesToSend.length;
+		//int dataLen = bytesToSend.length;
 
 		// sending packet
-		sendPacket = new DatagramPacket(bytesToSend, dataLen, serverAddress, servPort);
+		//sendPacket = new DatagramPacket(bytesToSend, dataLen, serverAddress, servPort);
 
 		// receive packet
-		receivePacket = new DatagramPacket(new byte[dataLen], dataLen);
+		//receivePacket = new DatagramPacket(new byte[dataLen], dataLen);
+		
+		//socket.send(sendPacket);
+		//socket.receive(receivePacket);
 
-		socket.send(sendPacket);
-
-		socket.receive(receivePacket);
-
-		System.out.println("Received: " + new String(receivePacket.getData()));
+		
+		//System.out.println("Received: " + new String(receivePacket.getData()));
 
 	}
 

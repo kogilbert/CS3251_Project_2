@@ -58,11 +58,12 @@ public class FTAServer {
 			
 			
 			System.out.println("Soure port: " + header.getSourcePort() + "\nDest Port: " 
-					+ header.getDestPort() + "\nSYN: " + header.isSyn() + "\nData: " + RTP.byteArrayToString(content));
+					+ header.getDestPort() + "\nSYN: " + header.isSyn() + "\nData Size:" + content.length
+					+ "\nData: " + RTP.byteArrayToString(content) + "\n\n");
 			
 
 			    
-			socket.send(packet);
+			//socket.send(packet);
 
 			// Once the datagram socket receive data the buffer will be reset to
 			// the length of the data it received.

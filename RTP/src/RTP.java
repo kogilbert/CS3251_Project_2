@@ -26,9 +26,8 @@ public class RTP {
 	 * @param data data byte[]
 	 * @return result the single byte[] array
 	 */
-	static byte[] packData(byte[] header, byte[] data){
+	static byte[] packData(byte[] header, byte[] data, int dataLen){
 		int headerLen = header.length;
-		int dataLen = data.length;
 		int totalLen = headerLen + dataLen;
 		byte[] result = new byte[totalLen];
 		
