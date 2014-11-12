@@ -40,7 +40,7 @@ public class RTPHeader {
 		this.header[1] = (byte)(this.sourcePort & 0xFF);
 		this.header[2] = (byte)(this.destPort >> 8);
 		this.header[3] = (byte)(this.destPort & 0xFF);
-		this.header[4] = (byte)(this.headerLen & 0xFF);
+		this.header[4] = (byte)(RTPHeader.headerLen & 0xFF);
 		this.header[5] = (byte)(this.seqNum >> 24);
 		this.header[6] = (byte)(this.seqNum >> 16);		
 		this.header[7] = (byte)(this.seqNum >> 8);

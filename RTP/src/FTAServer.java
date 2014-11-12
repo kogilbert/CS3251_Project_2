@@ -1,6 +1,4 @@
-import java.io.*;
-import java.net.*;
-import java.util.*;
+import java.io.IOException;
 
 /* functions
 Start (Port num)
@@ -10,7 +8,6 @@ Debug On/Off
 
 public class FTAServer {
 
-	private static final int BUFFERMAX = 255;
 
 	public static void main(String[] args) throws IOException{
 		int servPort;
@@ -29,47 +26,28 @@ public class FTAServer {
 		 */
 		
 		servPort = Integer.parseInt(args[0]);
+		RTP rtpProtocol = new RTP(servPort);
 		System.out.println("Server has been set up with port num: " + servPort);
-		
-		DatagramSocket socket = RTP.start(servPort);
-
-		//int servPort = Integer.parseInt(args[0]);
-
-		//DatagramSocket socket = new DatagramSocket(servPort);
-		DatagramPacket packet = new DatagramPacket(new byte[BUFFERMAX],
-				BUFFERMAX);
 		
 		
 		/**
 		 * Start sending and receiving data------------------------------------------------------------------------
 		 */
 		
-		// keeping running
-		while (true) {
-			socket.receive(packet);
-			System.out.println("Handling client at "
-					+ packet.getAddress().getHostAddress() + " on port "
-					+ packet.getPort());
-			byte[] receiveData = packet.getData();
-			
-			RTPHeader header = RTP.getHeader(receiveData);
-			
-			byte[] content = RTP.getContentByte(receiveData, packet.getLength());
-			
-			
-			System.out.println("Soure port: " + header.getSourcePort() + "\nDest Port: " 
-					+ header.getDestPort() + "\nSYN: " + header.isSyn() + "\nData Size:" + content.length
-					+ "\nData: " + RTP.byteArrayToString(content) + "\n\n");
-			
 
-			    
-			//socket.send(packet);
-
-			// Once the datagram socket receive data the buffer will be reset to
-			// the length of the data it received.
-			// So we need to reset the buffer size back to the Maximum size
-			packet.setLength(BUFFERMAX);
+		FTA fileTrasimitor = new FTA("recvFile.txt");
+		
+		//keeping listening potential incoming packet
+		while(true){
+			byte[] receiveData = rtpProtocol.receive();
+			
+			if(receiveData != null){
+				byte[] payload = rtpProtocol.getContentByte(receiveData);
+				fileTrasimitor.receiveFile(payload);
+			}
+		
 		}
+		
 
 	}
 
