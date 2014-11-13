@@ -1,29 +1,19 @@
 import java.io.FileInputStream;
 
 
-public class RTPTransmission {
+public class RTPWindow {
 	int windowSize;
 	int startWindow;
 	int endWindow;
 	int nextToSend;
-	byte[] data;
 	
 	
-	public RTPTransmission() {
-		super();
-		// TODO Auto-generated constructor stub
-	}
-	
-	
-
-
-	public RTPTransmission(byte[] dataToSend) {
+	public RTPWindow() {
 		super();
 		this.windowSize = 1;
 		this.startWindow = 0;
 		this.endWindow = 0;
 		this.nextToSend = 0;
-		this.data = dataToSend;
 	}
 	
 	//for sending files
@@ -53,6 +43,14 @@ public class RTPTransmission {
 
 
 
+
+	public int getNextToSend() {
+		return nextToSend;
+	}
+
+	public void setNextToSend(int nextToSend) {
+		this.nextToSend = nextToSend;
+	}
 
 	public int getWindowSize() {
 		return windowSize;

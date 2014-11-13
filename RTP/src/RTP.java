@@ -18,6 +18,7 @@ public class RTP {
 	private RTPHeader header;
 	DatagramPacket sendPacket;
 	DatagramPacket recvPacket;
+	RTPWindow window;
 	
 	/**
 	 * Default Constructor
@@ -30,6 +31,7 @@ public class RTP {
 		header = null;
 		sendPacket = null;
 		recvPacket = null;
+		window = new RTPWindow();
 	}
 	
 	/**
@@ -120,6 +122,7 @@ public class RTP {
 		while( payloadLen != -1){
 			payload =  new byte[payloadLen];
 			System.arraycopy(buffer, 0, payload, 0, payloadLen);
+			
 			this.send(payload);
 			payloadLen = fileIn.read(buffer);
 		}
@@ -130,21 +133,15 @@ public class RTP {
 	
 	public void send(byte[] data) throws IOException {
 		
+		int seqNume = window.getNextToSend();
+		//RTPHeader header = new RTPHeader(clientPort, servPort, seqNume, 0);
+		
 		byte[] dataWithHeader = packData(header.getHeader(), data);
 		
 		sendPacket = new DatagramPacket(dataWithHeader, dataWithHeader.length,
 				serverAddress, servPort);
 		
 		socket.send(sendPacket);
-	}
-	
-	public void receiveFile(byte[] data, BufferedOutputStream outBuffer) throws IOException{
-		if(outBuffer != null){
-			outBuffer.write(data, 0, data.length);
-			outBuffer.flush(); 
-		} else {
-			throw new IOException("outBuffer havent been initialized");
-		}
 	}
 	
 	
@@ -161,6 +158,8 @@ public class RTP {
 			System.arraycopy(recvPacket.getData(), 0, actualRecvData, 0, recvPacket.getLength());
 			return actualRecvData;
 		}
+		
+		
 		
 		
 		// Once the datagram socket receive data the buffer will be reset to
