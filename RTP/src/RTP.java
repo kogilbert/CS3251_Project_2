@@ -1,3 +1,6 @@
+import java.io.BufferedOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -110,6 +113,21 @@ public class RTP {
 		
 	}
 	
+	public void sendFile(FileInputStream fileIn) throws IOException{
+		byte[] buffer = new byte[RTP.BUFFERMAX - RTPHeader.headerLen];
+		int payloadLen = fileIn.read(buffer);
+		byte[] payload;
+		while( payloadLen != -1){
+			payload =  new byte[payloadLen];
+			System.arraycopy(buffer, 0, payload, 0, payloadLen);
+			this.send(payload);
+			payloadLen = fileIn.read(buffer);
+		}
+		
+		fileIn.close();
+	}
+	
+	
 	public void send(byte[] data) throws IOException {
 		
 		byte[] dataWithHeader = packData(header.getHeader(), data);
@@ -119,6 +137,16 @@ public class RTP {
 		
 		socket.send(sendPacket);
 	}
+	
+	public void receiveFile(byte[] data, BufferedOutputStream outBuffer) throws IOException{
+		if(outBuffer != null){
+			outBuffer.write(data, 0, data.length);
+			outBuffer.flush(); 
+		} else {
+			throw new IOException("outBuffer havent been initialized");
+		}
+	}
+	
 	
 	public byte[] receive() throws IOException{
 		recvPacket = new DatagramPacket(new byte[BUFFERMAX],

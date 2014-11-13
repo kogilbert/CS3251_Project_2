@@ -1,3 +1,5 @@
+import java.io.BufferedOutputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 
 /* functions
@@ -35,7 +37,10 @@ public class FTAServer {
 		 */
 		
 
-		FTA fileTrasimitor = new FTA("recvFile.txt");
+		String receFileName = "recvFile.txt";
+	
+		FileOutputStream fileOut =  new FileOutputStream(System.getProperty("user.dir") + "/" + receFileName, true);
+		BufferedOutputStream outBuffer=  new BufferedOutputStream(fileOut);
 		
 		//keeping listening potential incoming packet
 		while(true){
@@ -43,12 +48,15 @@ public class FTAServer {
 			
 			if(receiveData != null){
 				byte[] payload = rtpProtocol.getContentByte(receiveData);
-				fileTrasimitor.receiveFile(payload);
+				if(outBuffer != null){
+					outBuffer.write(payload, 0, payload.length);
+					outBuffer.flush(); 
+				} else {
+					throw new IOException("outBuffer havent been initialized");
+				}
 			}
+		}		
 		
-		}
-		
-
 	}
 
 }

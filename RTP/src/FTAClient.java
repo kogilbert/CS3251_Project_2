@@ -1,3 +1,4 @@
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 
@@ -47,9 +48,9 @@ public class FTAClient {
 		
 		String filename = args[2];
 		
-		FTA fileTransimitor = new FTA();
+		FileInputStream fileIn = new FileInputStream(System.getProperty("user.dir") + "/" + filename);
 		
-		fileTransimitor.sendFile(filename, rtpProtocol);
+		rtpProtocol.sendFile(fileIn);
 				
 
 	}
