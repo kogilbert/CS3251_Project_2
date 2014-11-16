@@ -123,15 +123,18 @@ public class RTP {
 			payload =  new byte[payloadLen];
 			System.arraycopy(buffer, 0, payload, 0, payloadLen);
 			
-			this.send(payload);
+			this.send(payload, serverAddress, servPort);
+			window.setNextToSend(window.getNextToSend() + 1);
+			
+			
 			payloadLen = fileIn.read(buffer);
 		}
 		
 		fileIn.close();
 	}
 	
-	
-	public void send(byte[] data) throws IOException {
+	//*********** need to update this so that it has IP and port num to send to or add a second function with this******
+	public void send(byte[] data, InetAddress address, int port) throws IOException {
 		
 		int seqNume = window.getNextToSend();
 		//RTPHeader header = new RTPHeader(clientPort, servPort, seqNume, 0);
@@ -139,11 +142,35 @@ public class RTP {
 		byte[] dataWithHeader = packData(header.getHeader(), data);
 		
 		sendPacket = new DatagramPacket(dataWithHeader, dataWithHeader.length,
-				serverAddress, servPort);
+				address, port);
 		
 		socket.send(sendPacket);
 	}
 	
+	//run this function on the receiving side during a transmission
+	public void receiveStream() throws IOException{
+		boolean moreData = true;
+		
+		while(moreData){
+			//receive data
+			byte[] received = this.receive();
+			
+			//get the sequence number and send back an ACK
+			RTPHeader header = new RTPHeader();
+			header.headerFromArray(received);
+			int seqNum = header.getSeqNum();
+			RTPHeader sendHeader = new RTPHeader();
+			sendHeader.setAckNum(seqNum);
+			sendHeader.setAck(true);
+			
+			//need to add checksum check
+			
+			this.send(sendHeader.setHeader(), serverAddress, clientPort);
+			
+
+			
+		}
+	}
 	
 	public byte[] receive() throws IOException{
 		recvPacket = new DatagramPacket(new byte[BUFFERMAX],
