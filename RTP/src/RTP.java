@@ -41,10 +41,12 @@ public class RTP {
 	public RTP(int servPort) throws SocketException{
 		this.clientPort = servPort;
 		socket = new DatagramSocket(servPort);
+		header = new RTPHeader((short)clientPort, (short)(clientPort+1), 0, 0);
+		window = new RTPWindow();
 	}
 	
 	/**
-	 * Constructor for server
+	 * Constructor for client
 	 */
 	public RTP(InetAddress serverAddress, int servPort, int clientPort) throws SocketException {
 		super();
@@ -53,6 +55,7 @@ public class RTP {
 		this.clientPort = clientPort;
 		socket = new DatagramSocket(clientPort);
 		header = new RTPHeader((short)clientPort, (short)(clientPort+1), 0, 0);
+		window = new RTPWindow();
 	}
 
 	public DatagramSocket getSocket() {
@@ -111,20 +114,53 @@ public class RTP {
 //		return new DatagramSocket(port);
 //	}
 //	
-	public void connect(){
+	public void connect() throws IOException{
+		header.setSyn(true);
+		this.send(null);
+		byte[] recvData = this.receive();
+		header = this.getHeader(recvData);
+		if(header.getAckNum() == 0){
+			header.setSyn(false);
+		}
 		
+	}
+	
+	public void listen() throws IOException{
+		while(true){
+			byte[] recvData = this.receive();
+			if(recvData != null){
+				header = this.getHeader(recvData);
+				if(header.isSyn()){
+					this.sendAck();
+				} 
+			}
+		}
 	}
 	
 	public void sendFile(FileInputStream fileIn) throws IOException{
 		byte[] buffer = new byte[RTP.BUFFERMAX - RTPHeader.headerLen];
 		int payloadLen = fileIn.read(buffer);
 		byte[] payload;
+		
 		while( payloadLen != -1){
-			payload =  new byte[payloadLen];
-			System.arraycopy(buffer, 0, payload, 0, payloadLen);
+			if(window.getNextToSend() <= window.getEndWindow()){
+				payload =  new byte[payloadLen];
+				System.arraycopy(buffer, 0, payload, 0, payloadLen);
+				int seq = window.getNextToSend();
+				header.setSeqNum(seq);
+				this.send(payload);
+				seq++;
+				window.setNextToSend(seq);
+				payloadLen = fileIn.read(buffer);
+			}
 			
-			this.send(payload);
-			payloadLen = fileIn.read(buffer);
+			byte[] recvData = this.receive();
+			RTPHeader tmp = this.getHeader(recvData);
+			if(tmp.getAckNum() == window.getStartWindow()){
+				window.setStartWindow(window.getStartWindow()+1);
+				window.setEndWindow(window.getEndWindow()+1);
+			}
+			
 		}
 		
 		fileIn.close();
@@ -132,15 +168,19 @@ public class RTP {
 	
 	
 	public void send(byte[] data) throws IOException {
-		
-		int seqNume = window.getNextToSend();
-		//RTPHeader header = new RTPHeader(clientPort, servPort, seqNume, 0);
-		
+		header.setAck(false);
 		byte[] dataWithHeader = packData(header.getHeader(), data);
 		
 		sendPacket = new DatagramPacket(dataWithHeader, dataWithHeader.length,
 				serverAddress, servPort);
-		
+		socket.send(sendPacket);
+
+	}
+	
+	public void sendAck() throws IOException {
+		header.setAck(true);
+		sendPacket = new DatagramPacket(header.getHeader(), RTPHeader.headerLen,
+				serverAddress, servPort);
 		socket.send(sendPacket);
 	}
 	
@@ -153,21 +193,45 @@ public class RTP {
 				+ recvPacket.getAddress().getHostAddress() + " on port "
 				+ recvPacket.getPort());
 		
+		byte[] actualRecvData = null;
 		if(recvPacket.getData() != null){
-			byte[] actualRecvData = new byte[recvPacket.getLength()];
+			actualRecvData = new byte[recvPacket.getLength()];
 			System.arraycopy(recvPacket.getData(), 0, actualRecvData, 0, recvPacket.getLength());
-			return actualRecvData;
+			RTPHeader tmp = this.getHeader(actualRecvData);
+			int seq = tmp.getSeqNum();
+			header.setAckNum(seq);
+			System.out.println("Recv ack :" + tmp.getAckNum());
 		}
-		
-		
 		
 		
 		// Once the datagram socket receive data the buffer will be reset to
 		// the length of the data it received.
 		// So we need to reset the buffer size back to the Maximum size
 		recvPacket.setLength(BUFFERMAX);
-		return null;
+		return actualRecvData;
+	}
+	
+	public void recvFile(String receFileName) throws IOException{
 		
+		FileOutputStream fileOut =  new FileOutputStream(System.getProperty("user.dir") + "/" + receFileName, true);
+		BufferedOutputStream outBuffer=  new BufferedOutputStream(fileOut);
+		
+		//keeping listening potential incoming packet
+		while(true){
+			byte[] receiveData = this.receive();
+			
+			if(receiveData != null){
+				this.sendAck();
+				byte[] payload = this.getContentByte(receiveData);
+				if(outBuffer != null){
+					outBuffer.write(payload, 0, payload.length);
+					outBuffer.flush(); 
+				} else {
+					throw new IOException("outBuffer havent been initialized");
+					
+				}
+			}
+		}
 	}
 	
 	/**
@@ -178,19 +242,25 @@ public class RTP {
 	 * @return result the single byte[] array
 	 */
 	static byte[] packData(byte[] header, byte[] data){
-		int headerLen = header.length;
-		int totalLen = headerLen + data.length;
-		byte[] result = new byte[totalLen];
 		
-		for(int i =0; i < headerLen; i++){
-			result[i] = header[i];
+		if(data != null){
+			int headerLen = header.length;
+			int totalLen = headerLen + data.length;
+			byte[] result = new byte[totalLen];
+			
+			for(int i =0; i < headerLen; i++){
+				result[i] = header[i];
+			}
+			int j = 0;
+			for(int i = headerLen; i < totalLen; i++){
+				result[i] = data[j];
+				j++;
+			}
+			return result;
+		} else {
+			return header;
 		}
-		int j = 0;
-		for(int i = headerLen; i < totalLen; i++){
-			result[i] = data[j];
-			j++;
-		}
-		return result;
+
 	}
 	
 	/**

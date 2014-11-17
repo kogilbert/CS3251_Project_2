@@ -51,7 +51,8 @@ public class FTAClient {
 		FileInputStream fileIn = new FileInputStream(System.getProperty("user.dir") + "/" + filename);
 		
 		rtpProtocol.sendFile(fileIn);
-				
+		
+		
 
 	}
 

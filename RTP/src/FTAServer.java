@@ -1,6 +1,7 @@
 import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
 
 /* functions
 Start (Port num)
@@ -12,7 +13,6 @@ public class FTAServer {
 
 
 	public static void main(String[] args) throws IOException{
-		int servPort;
 //		System.out.println("Welcome to the server, type 'connect(Port Number)");
 //		Scanner sc = new Scanner(System.in);
 //		String input = sc.nextLine();
@@ -24,12 +24,24 @@ public class FTAServer {
 //		System.out.println(port);
 	
 		/**
-		 * Set up user input parameters Server Port Number-------------------------------------------------------
+		 * Set up user input parameters Server Port Number, Emulator IP, Emulator Port Number--------------------------
 		 */
 		
-		servPort = Integer.parseInt(args[0]);
-		RTP rtpProtocol = new RTP(servPort);
-		System.out.println("Server has been set up with port num: " + servPort);
+		// Test for correct # of args throw new
+		// lllegalArgumentException("Parameter(s)' <Server> <Word> [<Port>]");
+		if (args.length != 3) {
+			throw new IOException("Invalid Argument");
+		}
+
+		int hostPort = Integer.parseInt(args[2]);
+
+		// Server IP address
+		InetAddress serverAddress = InetAddress.getByName(args[0]);
+
+		// Server port num
+		int servPort = Integer.parseInt(args[1]);
+		
+		RTP rtpProtocol = new RTP(serverAddress, servPort, hostPort);
 		
 		
 		/**
@@ -39,23 +51,29 @@ public class FTAServer {
 
 		String receFileName = "recvFile.txt";
 	
-		FileOutputStream fileOut =  new FileOutputStream(System.getProperty("user.dir") + "/" + receFileName, true);
-		BufferedOutputStream outBuffer=  new BufferedOutputStream(fileOut);
+		rtpProtocol.recvFile(receFileName);
 		
-		//keeping listening potential incoming packet
-		while(true){
-			byte[] receiveData = rtpProtocol.receive();
-			
-			if(receiveData != null){
-				byte[] payload = rtpProtocol.getContentByte(receiveData);
-				if(outBuffer != null){
-					outBuffer.write(payload, 0, payload.length);
-					outBuffer.flush(); 
-				} else {
-					throw new IOException("outBuffer havent been initialized");
-				}
-			}
-		}		
+//		@SuppressWarnings("resource")
+//		FileOutputStream fileOut =  new FileOutputStream(System.getProperty("user.dir") + "/" + receFileName, true);
+//		BufferedOutputStream outBuffer=  new BufferedOutputStream(fileOut);
+//		
+//		//keeping listening potential incoming packet
+//		while(true){
+//			byte[] receiveData = rtpProtocol.receive();
+//			
+//			if(receiveData != null){
+//				rtpProtocol.sendAck();
+//				byte[] payload = rtpProtocol.getContentByte(receiveData);
+//				if(outBuffer != null){
+//					outBuffer.write(payload, 0, payload.length);
+//					outBuffer.flush(); 
+//				} else {
+//					throw new IOException("outBuffer havent been initialized");
+//					
+//				}
+//			}
+//		}
+		
 		
 	}
 
