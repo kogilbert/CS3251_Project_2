@@ -37,21 +37,24 @@ public class FTAClient {
 		InetAddress serverAddress = InetAddress.getByName(args[0]);
 
 		// Server port num
-		int servPort = Integer.parseInt(args[1]);
+		int emuPort = Integer.parseInt(args[1]);
 		
-		RTP rtpProtocol = new RTP(serverAddress, servPort, clientPort);
+		RTP rtpProtocol = new RTP(serverAddress, emuPort, clientPort, clientPort+1);
 		
 
 		/**
 		 * Start sending and receiving data------------------------------------------------------------------------
 		 */
 		
+		rtpProtocol.connect();
+		
 		String filename = args[2];
 		
 		FileInputStream fileIn = new FileInputStream(System.getProperty("user.dir") + "/" + filename);
 		
 		rtpProtocol.sendFile(fileIn);
-				
+		
+		
 
 	}
 

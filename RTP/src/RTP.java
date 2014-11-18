@@ -13,46 +13,43 @@ public class RTP {
 	
 	private DatagramSocket socket;
 	private InetAddress serverAddress;
-	private int servPort;
-	private int clientPort;
+	private int emuPort;
+	private int hostPort;
+	private int destPort;
 	private RTPHeader header;
 	DatagramPacket sendPacket;
 	DatagramPacket recvPacket;
 	RTPWindow window;
+	int conFlag = 0;
 	
 	/**
 	 * Default Constructor
 	 */
 	public RTP(){
 		this.serverAddress = null;
-		this.servPort = -1;
-		this.clientPort = -1;
+		this.emuPort = -1;
+		this.hostPort = -1;
+		this.setDestPort(-1);
 		socket = null;
 		header = null;
 		sendPacket = null;
 		recvPacket = null;
 		window = new RTPWindow();
 	}
+
 	
 	/**
-	 * Constructor for server
-	 * @throws SocketException 
+	 * Constructor for host
 	 */
-	public RTP(int servPort) throws SocketException{
-		this.clientPort = servPort;
-		socket = new DatagramSocket(servPort);
-	}
-	
-	/**
-	 * Constructor for server
-	 */
-	public RTP(InetAddress serverAddress, int servPort, int clientPort) throws SocketException {
+	public RTP(InetAddress serverAddress, int emuPort, int hostPort, int destPort) throws SocketException {
 		super();
 		this.serverAddress = serverAddress;
-		this.servPort = servPort;
-		this.clientPort = clientPort;
-		socket = new DatagramSocket(clientPort);
-		header = new RTPHeader((short)clientPort, (short)(clientPort+1), 0, 0);
+		this.emuPort = emuPort;
+		this.hostPort = hostPort;
+		this.setDestPort(destPort);
+		socket = new DatagramSocket(hostPort);
+		header = new RTPHeader((short)hostPort, (short)destPort, 0, 0);
+		window = new RTPWindow();
 	}
 
 	public DatagramSocket getSocket() {
@@ -71,20 +68,30 @@ public class RTP {
 		this.serverAddress = serverAddress;
 	}
 
-	public int getServPort() {
-		return servPort;
+	public int getemuPort() {
+		return emuPort;
 	}
 
-	public void setServPort(int servPort) {
-		this.servPort = servPort;
+	public void setemuPort(int emuPort) {
+		this.emuPort = emuPort;
 	}
 
-	public int getClientPort() {
-		return clientPort;
+	public int getDestPort() {
+		return destPort;
 	}
 
-	public void setClientPort(int clientPort) {
-		this.clientPort = clientPort;
+
+	public void setDestPort(int destPort) {
+		this.destPort = destPort;
+	}
+
+
+	public int gethostPort() {
+		return hostPort;
+	}
+
+	public void sethostPort(int hostPort) {
+		this.hostPort = hostPort;
 	}
 
 	public RTPHeader getHeader() {
@@ -111,66 +118,97 @@ public class RTP {
 //		return new DatagramSocket(port);
 //	}
 //	
-	public void connect(){
-		
+	public void connect() throws IOException{
+		header.setSyn(true);
+		this.send(null);
+		byte[] recvData = this.receive();
+		if(recvData != null){
+			RTPHeader tmp = this.getHeader(recvData);
+			if(tmp.getAckNum() == 0){
+				header.setSyn(false);
+			}
+		} else {
+			throw new IOException("Server no response");
+		}
+		this.send(null);
+		conFlag = 2;
+	}
+	
+	/**
+	 * conFlag : connection flag. 
+	 * 0 : listening for connection 
+	 * 1 : received first SYN = 1 packet.  
+	 * 2 : connection established. 
+	 * @throws IOException
+	 */
+	public void listen() throws IOException{
+		while(true){
+			byte[] recvData = this.receive();
+			System.out.println("listen1");
+			if(recvData != null){
+				RTPHeader tmp = this.getHeader(recvData);
+				if(conFlag == 0) {
+					if(tmp.isSyn()){
+						this.sendAck();
+					} 
+					conFlag = 1;
+				} else if (conFlag == 1){
+					if(!tmp.isSyn()){
+						conFlag = 2;
+						break;
+					} else {conFlag = 0; }
+				}
+			}
+		}
 	}
 	
 	public void sendFile(FileInputStream fileIn) throws IOException{
 		byte[] buffer = new byte[RTP.BUFFERMAX - RTPHeader.headerLen];
 		int payloadLen = fileIn.read(buffer);
 		byte[] payload;
-		while( payloadLen != -1){
-			payload =  new byte[payloadLen];
-			System.arraycopy(buffer, 0, payload, 0, payloadLen);
-			
-			this.send(payload, serverAddress, servPort);
-			window.setNextToSend(window.getNextToSend() + 1);
-			
-			
-			payloadLen = fileIn.read(buffer);
-		}
 		
+		while( payloadLen != -1){
+			if(window.getNextToSend() <= window.getEndWindow()){
+				payload =  new byte[payloadLen];
+				System.arraycopy(buffer, 0, payload, 0, payloadLen);
+				int seq = window.getNextToSend();
+				header.setSeqNum(seq);
+				this.send(payload);
+				seq++;
+				window.setNextToSend(seq);
+				payloadLen = fileIn.read(buffer);
+			}
+			
+			byte[] recvData = this.receive();
+			RTPHeader tmp = this.getHeader(recvData);
+			if(tmp.getAckNum() == window.getStartWindow()){
+				window.setStartWindow(window.getStartWindow()+1);
+				window.setEndWindow(window.getEndWindow()+1);
+			}
+			
+		}
 		fileIn.close();
 	}
 	
-	//*********** need to update this so that it has IP and port num to send to or add a second function with this******
-	public void send(byte[] data, InetAddress address, int port) throws IOException {
-		
-		int seqNume = window.getNextToSend();
-		//RTPHeader header = new RTPHeader(clientPort, servPort, seqNume, 0);
-		
+	
+	public void send(byte[] data) throws IOException {
+		header.setAck(false);
 		byte[] dataWithHeader = packData(header.getHeader(), data);
-		
+		System.out.println("send----" + header.getSourcePort());
 		sendPacket = new DatagramPacket(dataWithHeader, dataWithHeader.length,
-				address, port);
-		
+				serverAddress, emuPort);
+		socket.send(sendPacket);
+
+	}
+	
+	public void sendAck() throws IOException {
+		header.setAck(true);
+		System.out.println("sendAck----" + header.getSourcePort());
+		sendPacket = new DatagramPacket(header.getHeader(), RTPHeader.headerLen,
+				serverAddress, emuPort);
 		socket.send(sendPacket);
 	}
 	
-	//run this function on the receiving side during a transmission
-	public void receiveStream() throws IOException{
-		boolean moreData = true;
-		
-		while(moreData){
-			//receive data
-			byte[] received = this.receive();
-			
-			//get the sequence number and send back an ACK
-			RTPHeader header = new RTPHeader();
-			header.headerFromArray(received);
-			int seqNum = header.getSeqNum();
-			RTPHeader sendHeader = new RTPHeader();
-			sendHeader.setAckNum(seqNum);
-			sendHeader.setAck(true);
-			
-			//need to add checksum check
-			
-			this.send(sendHeader.setHeader(), serverAddress, clientPort);
-			
-
-			
-		}
-	}
 	
 	public byte[] receive() throws IOException{
 		recvPacket = new DatagramPacket(new byte[BUFFERMAX],
@@ -180,21 +218,45 @@ public class RTP {
 				+ recvPacket.getAddress().getHostAddress() + " on port "
 				+ recvPacket.getPort());
 		
+		byte[] actualRecvData = null;
 		if(recvPacket.getData() != null){
-			byte[] actualRecvData = new byte[recvPacket.getLength()];
+			actualRecvData = new byte[recvPacket.getLength()];
 			System.arraycopy(recvPacket.getData(), 0, actualRecvData, 0, recvPacket.getLength());
-			return actualRecvData;
+			RTPHeader tmp = this.getHeader(actualRecvData);
+			int seq = tmp.getSeqNum();
+			header.setAckNum(seq);
+			System.out.println("Recv ack :" + tmp.getAckNum());
 		}
-		
-		
 		
 		
 		// Once the datagram socket receive data the buffer will be reset to
 		// the length of the data it received.
 		// So we need to reset the buffer size back to the Maximum size
 		recvPacket.setLength(BUFFERMAX);
-		return null;
+		return actualRecvData;
+	}
+	
+	public void recvFile(String receFileName) throws IOException{
 		
+		FileOutputStream fileOut =  new FileOutputStream(System.getProperty("user.dir") + "/" + receFileName, true);
+		BufferedOutputStream outBuffer=  new BufferedOutputStream(fileOut);
+		
+		//keeping listening potential incoming packet
+		while(true){
+			byte[] receiveData = this.receive();
+			
+			if(receiveData != null){
+				this.sendAck();
+				byte[] payload = this.getContentByte(receiveData);
+				if(outBuffer != null){
+					outBuffer.write(payload, 0, payload.length);
+					outBuffer.flush(); 
+				} else {
+					throw new IOException("outBuffer havent been initialized");
+					
+				}
+			}
+		}
 	}
 	
 	/**
@@ -205,19 +267,25 @@ public class RTP {
 	 * @return result the single byte[] array
 	 */
 	static byte[] packData(byte[] header, byte[] data){
-		int headerLen = header.length;
-		int totalLen = headerLen + data.length;
-		byte[] result = new byte[totalLen];
 		
-		for(int i =0; i < headerLen; i++){
-			result[i] = header[i];
+		if(data != null){
+			int headerLen = header.length;
+			int totalLen = headerLen + data.length;
+			byte[] result = new byte[totalLen];
+			
+			for(int i =0; i < headerLen; i++){
+				result[i] = header[i];
+			}
+			int j = 0;
+			for(int i = headerLen; i < totalLen; i++){
+				result[i] = data[j];
+				j++;
+			}
+			return result;
+		} else {
+			return header;
 		}
-		int j = 0;
-		for(int i = headerLen; i < totalLen; i++){
-			result[i] = data[j];
-			j++;
-		}
-		return result;
+
 	}
 	
 	/**
