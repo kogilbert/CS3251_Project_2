@@ -13,48 +13,42 @@ public class RTP {
 	
 	private DatagramSocket socket;
 	private InetAddress serverAddress;
-	private int servPort;
-	private int clientPort;
+	private int emuPort;
+	private int hostPort;
+	private int destPort;
 	private RTPHeader header;
 	DatagramPacket sendPacket;
 	DatagramPacket recvPacket;
 	RTPWindow window;
+	int conFlag = 0;
 	
 	/**
 	 * Default Constructor
 	 */
 	public RTP(){
 		this.serverAddress = null;
-		this.servPort = -1;
-		this.clientPort = -1;
+		this.emuPort = -1;
+		this.hostPort = -1;
+		this.setDestPort(-1);
 		socket = null;
 		header = null;
 		sendPacket = null;
 		recvPacket = null;
 		window = new RTPWindow();
 	}
+
 	
 	/**
-	 * Constructor for server
-	 * @throws SocketException 
+	 * Constructor for host
 	 */
-	public RTP(int servPort) throws SocketException{
-		this.clientPort = servPort;
-		socket = new DatagramSocket(servPort);
-		header = new RTPHeader((short)clientPort, (short)(clientPort+1), 0, 0);
-		window = new RTPWindow();
-	}
-	
-	/**
-	 * Constructor for client
-	 */
-	public RTP(InetAddress serverAddress, int servPort, int clientPort) throws SocketException {
+	public RTP(InetAddress serverAddress, int emuPort, int hostPort, int destPort) throws SocketException {
 		super();
 		this.serverAddress = serverAddress;
-		this.servPort = servPort;
-		this.clientPort = clientPort;
-		socket = new DatagramSocket(clientPort);
-		header = new RTPHeader((short)clientPort, (short)(clientPort+1), 0, 0);
+		this.emuPort = emuPort;
+		this.hostPort = hostPort;
+		this.setDestPort(destPort);
+		socket = new DatagramSocket(hostPort);
+		header = new RTPHeader((short)hostPort, (short)destPort, 0, 0);
 		window = new RTPWindow();
 	}
 
@@ -74,20 +68,30 @@ public class RTP {
 		this.serverAddress = serverAddress;
 	}
 
-	public int getServPort() {
-		return servPort;
+	public int getemuPort() {
+		return emuPort;
 	}
 
-	public void setServPort(int servPort) {
-		this.servPort = servPort;
+	public void setemuPort(int emuPort) {
+		this.emuPort = emuPort;
 	}
 
-	public int getClientPort() {
-		return clientPort;
+	public int getDestPort() {
+		return destPort;
 	}
 
-	public void setClientPort(int clientPort) {
-		this.clientPort = clientPort;
+
+	public void setDestPort(int destPort) {
+		this.destPort = destPort;
+	}
+
+
+	public int gethostPort() {
+		return hostPort;
+	}
+
+	public void sethostPort(int hostPort) {
+		this.hostPort = hostPort;
 	}
 
 	public RTPHeader getHeader() {
@@ -118,21 +122,42 @@ public class RTP {
 		header.setSyn(true);
 		this.send(null);
 		byte[] recvData = this.receive();
-		header = this.getHeader(recvData);
-		if(header.getAckNum() == 0){
-			header.setSyn(false);
+		if(recvData != null){
+			RTPHeader tmp = this.getHeader(recvData);
+			if(tmp.getAckNum() == 0){
+				header.setSyn(false);
+			}
+		} else {
+			throw new IOException("Server no response");
 		}
-		
+		this.send(null);
+		conFlag = 2;
 	}
 	
+	/**
+	 * conFlag : connection flag. 
+	 * 0 : listening for connection 
+	 * 1 : received first SYN = 1 packet.  
+	 * 2 : connection established. 
+	 * @throws IOException
+	 */
 	public void listen() throws IOException{
 		while(true){
 			byte[] recvData = this.receive();
+			System.out.println("listen1");
 			if(recvData != null){
-				header = this.getHeader(recvData);
-				if(header.isSyn()){
-					this.sendAck();
-				} 
+				RTPHeader tmp = this.getHeader(recvData);
+				if(conFlag == 0) {
+					if(tmp.isSyn()){
+						this.sendAck();
+					} 
+					conFlag = 1;
+				} else if (conFlag == 1){
+					if(!tmp.isSyn()){
+						conFlag = 2;
+						break;
+					} else {conFlag = 0; }
+				}
 			}
 		}
 	}
@@ -162,7 +187,6 @@ public class RTP {
 			}
 			
 		}
-		
 		fileIn.close();
 	}
 	
@@ -170,17 +194,18 @@ public class RTP {
 	public void send(byte[] data) throws IOException {
 		header.setAck(false);
 		byte[] dataWithHeader = packData(header.getHeader(), data);
-		
+		System.out.println("send----" + header.getSourcePort());
 		sendPacket = new DatagramPacket(dataWithHeader, dataWithHeader.length,
-				serverAddress, servPort);
+				serverAddress, emuPort);
 		socket.send(sendPacket);
 
 	}
 	
 	public void sendAck() throws IOException {
 		header.setAck(true);
+		System.out.println("sendAck----" + header.getSourcePort());
 		sendPacket = new DatagramPacket(header.getHeader(), RTPHeader.headerLen,
-				serverAddress, servPort);
+				serverAddress, emuPort);
 		socket.send(sendPacket);
 	}
 	

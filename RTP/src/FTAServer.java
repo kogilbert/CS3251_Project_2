@@ -39,15 +39,16 @@ public class FTAServer {
 		InetAddress serverAddress = InetAddress.getByName(args[0]);
 
 		// Server port num
-		int servPort = Integer.parseInt(args[1]);
+		int emuPort = Integer.parseInt(args[1]);
 		
-		RTP rtpProtocol = new RTP(serverAddress, servPort, hostPort);
+		RTP rtpProtocol = new RTP(serverAddress, emuPort, hostPort, hostPort-1);
 		
 		
 		/**
 		 * Start sending and receiving data------------------------------------------------------------------------
 		 */
 		
+		rtpProtocol.listen();
 
 		String receFileName = "recvFile.txt";
 	
