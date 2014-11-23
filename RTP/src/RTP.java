@@ -6,6 +6,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 
 public class RTP {
 
@@ -48,6 +49,7 @@ public class RTP {
 		this.hostPort = hostPort;
 		this.destPort = destPort;
 		socket = new DatagramSocket(hostPort);
+		socket.setSoTimeout(1000);
 		header = new RTPHeader((short)hostPort, (short)destPort, 0, 0);
 		window = new RTPWindow();
 	}
@@ -121,18 +123,24 @@ public class RTP {
 	public void connect() throws IOException{
 		header.setSyn(true);
 		this.send(null);
-		byte[] recvData = this.receive();
-		if(recvData != null){
-			RTPHeader tmp = this.getHeader(recvData);
-			if(tmp.isAck()){
-				header.setSyn(false);
+		RTPTimer timer = new RTPTimer();
+		timer.start();
+		
+		try{
+			byte[] recvData = this.receive();
+			if(recvData != null){
+				RTPHeader tmp = this.getHeader(recvData);
+				if(tmp.isAck()){
+					header.setSyn(false);
+				}
+			} else {
+				throw new IOException("Server no response");
 			}
-		} else {
-			throw new IOException("Server no response");
-		}
-		this.send(null);
-		conFlag = 2;
-		System.out.println("Connection established");
+			this.send(null);
+			conFlag = 2;
+			System.out.println("Connection established");
+		}catch(SocketTimeoutException e){}
+		
 	}
 	
 	public void close() throws IOException{
@@ -167,33 +175,38 @@ public class RTP {
 	 */
 	public void listen() throws IOException{
 		while(true){
-			byte[] recvData = this.receive();
-			if(recvData != null){
-				RTPHeader tmp = this.getHeader(recvData);
-				if(conFlag == 0) {
-					if(tmp.isSyn()){
-						this.sendAck();
-					} 
-					conFlag = 1;
-				} else if (conFlag == 1){
-					if(!tmp.isSyn()){
-						conFlag = 2;
-						break;
-					} else {conFlag = 0; }
-				} else if (conFlag == 2) {
-					if(tmp.isFin()){
-						this.sendAck();
-						header.setFin(true);
-						this.send(null);
-						conFlag = 3;
-					} 
-				} else if (conFlag == 3){
-					if(tmp.isAck()){
-						conFlag = 0;
-						break;
-					} else {conFlag = 0; }
+			try{
+				byte[] recvData = this.receive();
+				if(recvData != null){
+					RTPHeader tmp = this.getHeader(recvData);
+					if(conFlag == 0) {
+						if(tmp.isSyn()){
+							this.sendAck();
+						} 
+						conFlag = 1;
+					} else if (conFlag == 1){
+						if(!tmp.isSyn()){
+							conFlag = 2;
+							break;
+						} else {conFlag = 0; }
+					} else if (conFlag == 2) {
+						if(tmp.isFin()){
+							this.sendAck();
+							header.setFin(true);
+							this.send(null);
+							conFlag = 3;
+						} 
+					} else if (conFlag == 3){
+						if(tmp.isAck()){
+							conFlag = 0;
+							break;
+						} else {conFlag = 0; }
+					}
 				}
+			}catch(SocketTimeoutException e){
+				System.out.println("udp timeout");
 			}
+			
 		}
 	}
 	
@@ -204,6 +217,7 @@ public class RTP {
 			byte[] payload;
 			RTPTimer timer = new RTPTimer();
 			timer.start();
+			
 			while( payloadLen != -1){
 				if(timer.checkTimeout()){
 					window.setNextToSend(window.getStartWindow());
@@ -219,14 +233,16 @@ public class RTP {
 					payloadLen = fileIn.read(buffer);
 				}
 				
-				byte[] recvData = this.receive();
-				RTPHeader tmp = this.getHeader(recvData);
-				if(tmp.getAckNum() == window.getStartWindow()){
-					timer.start();
-					window.setStartWindow(window.getStartWindow()+1);
-					window.setEndWindow(window.getEndWindow()+1);
-				}
-				
+				try{
+					byte[] recvData = this.receive();
+					RTPHeader tmp = this.getHeader(recvData);
+					if(tmp.getAckNum() == window.getStartWindow()){
+						timer.start();
+						window.setStartWindow(window.getStartWindow()+1);
+						window.setEndWindow(window.getEndWindow()+1);
+					}
+				}catch(SocketTimeoutException e){}
+							
 			}
 			fileIn.close();
 		} else {
@@ -286,19 +302,22 @@ public class RTP {
 		
 		//keeping listening potential incoming packet
 		while(true){
-			byte[] receiveData = this.receive();
-			
-			if(receiveData != null){
-				this.sendAck();
-				byte[] payload = this.getContentByte(receiveData);
-				if(outBuffer != null){
-					outBuffer.write(payload, 0, payload.length);
-					outBuffer.flush(); 
-				} else {
-					throw new IOException("outBuffer havent been initialized");
-					
+			try{
+				byte[] receiveData = this.receive();
+				
+				if(receiveData != null){
+					this.sendAck();
+					byte[] payload = this.getContentByte(receiveData);
+					if(outBuffer != null){
+						outBuffer.write(payload, 0, payload.length);
+						outBuffer.flush(); 
+					} else {
+						throw new IOException("outBuffer havent been initialized");
+						
+					}
 				}
-			}
+			}catch(SocketTimeoutException e) {}
+			
 		}
 	}
 	
