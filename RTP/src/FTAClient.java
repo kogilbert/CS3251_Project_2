@@ -39,7 +39,9 @@ public class FTAClient {
 		// Server port num
 		int emuPort = Integer.parseInt(args[1]);
 		
-		RTP rtpProtocol = new RTP(serverAddress, emuPort, clientPort, clientPort+1);
+		int desPort =clientPort+1;
+		
+		RTP rtpProtocol = new RTP(serverAddress, emuPort, clientPort, desPort);
 		
 
 		/**
