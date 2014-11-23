@@ -146,21 +146,23 @@ public class RTP {
 	public void close() throws IOException{
 		header.setFin(true);
 		this.send(null);
-		
-		byte[] recvData = this.receive();
-		if(recvData != null){
-			RTPHeader tmp = this.getHeader(recvData);
-			if(conFlag == 2){
-				if(tmp.isAck()){
-					conFlag = 3;
-				}
-			} else if (conFlag == 3){
-				if (tmp.isFin()){
-					this.sendAck();
-					conFlag = 0;
+		try{
+			byte[] recvData = this.receive();
+			if(recvData != null){
+				RTPHeader tmp = this.getHeader(recvData);
+				if(conFlag == 2){
+					if(tmp.isAck()){
+						conFlag = 3;
+					}
+				} else if (conFlag == 3){
+					if (tmp.isFin()){
+						this.sendAck();
+						conFlag = 0;
+					}
 				}
 			}
-		}
+		}catch(SocketTimeoutException e){}
+		
 		
 		System.out.println("Connection closed");
 	}
