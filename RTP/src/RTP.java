@@ -122,24 +122,51 @@ public class RTP {
 //	
 	public void connect() throws IOException{
 		header.setSyn(true);
+		header.setSeqNum(header.getSeqNum() + 1);
 		this.send(null);
 		RTPTimer timer = new RTPTimer();
 		timer.start();
 		
-		try{
-			byte[] recvData = this.receive();
-			if(recvData != null){
-				RTPHeader tmp = this.getHeader(recvData);
-				if(tmp.isAck()){
-					header.setSyn(false);
-				}
-			} else {
-				throw new IOException("Server no response");
+		while(true){
+			
+			if(timer.checkTimeout()){
+				header.setSyn(true);
+				this.send(null);
+				timer.start();
 			}
-			this.send(null);
-			conFlag = 2;
-			System.out.println("Connection established");
-		}catch(SocketTimeoutException e){}
+			try{
+				byte[] recvData = this.receive();
+				if(recvData != null){
+					RTPHeader tmp = this.getHeader(recvData);
+					if(conFlag == 0) {
+						if(tmp.isAck()){
+							header.setSyn(false);
+							header.setSeqNum(header.getSeqNum() + 1);
+							this.send(null);
+							timer.start();
+							System.out.println("received first ack, sending sever message to establish connection");
+							while(true){
+								recvData = this.receive();
+								if(timer.checkTimeout()){
+									this.send(null);
+									timer.start();
+								}
+								tmp = this.getHeader(recvData);
+								if(tmp.isAck() /*& tmp.getAckNum() == 1*/){
+									conFlag = 2;	
+									System.out.println("Connection established");
+									break;
+								}
+							}
+						}
+					}
+				}
+			}catch(SocketTimeoutException e){}
+			
+			if(conFlag == 2){
+				break;
+			}
+		}
 		
 	}
 	
@@ -193,6 +220,7 @@ public class RTP {
 					} else if (conFlag == 1){
 						if(tmp.isSyn() == false){
 							conFlag = 2;
+							this.sendAck();
 							System.out.println("Connection established.");
 							break;
 						} else {conFlag = 0; }
@@ -211,9 +239,7 @@ public class RTP {
 						}
 					}
 				}
-			}catch(SocketTimeoutException e){
-				System.out.println("udp timeout");
-			}
+			}catch(SocketTimeoutException e){}
 			
 		}
 	}
