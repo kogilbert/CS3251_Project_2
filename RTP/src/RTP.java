@@ -46,7 +46,7 @@ public class RTP {
 		this.serverAddress = serverAddress;
 		this.emuPort = emuPort;
 		this.hostPort = hostPort;
-		this.setDestPort(destPort);
+		this.destPort = destPort;
 		socket = new DatagramSocket(hostPort);
 		header = new RTPHeader((short)hostPort, (short)destPort, 0, 0);
 		window = new RTPWindow();
@@ -124,7 +124,7 @@ public class RTP {
 		byte[] recvData = this.receive();
 		if(recvData != null){
 			RTPHeader tmp = this.getHeader(recvData);
-			if(tmp.getAckNum() == 0){
+			if(tmp.isAck()){
 				header.setSyn(false);
 			}
 		} else {
@@ -132,6 +132,29 @@ public class RTP {
 		}
 		this.send(null);
 		conFlag = 2;
+		System.out.println("Connection established");
+	}
+	
+	public void close() throws IOException{
+		header.setFin(true);
+		this.send(null);
+		
+		byte[] recvData = this.receive();
+		if(recvData != null){
+			RTPHeader tmp = this.getHeader(recvData);
+			if(conFlag == 2){
+				if(tmp.isAck()){
+					conFlag = 3;
+				}
+			} else if (conFlag == 3){
+				if (tmp.isFin()){
+					this.sendAck();
+					conFlag = 0;
+				}
+			}
+		}
+		
+		System.out.println("Connection closed");
 	}
 	
 	/**
@@ -139,12 +162,12 @@ public class RTP {
 	 * 0 : listening for connection 
 	 * 1 : received first SYN = 1 packet.  
 	 * 2 : connection established. 
+	 * 3 : closing wait 
 	 * @throws IOException
 	 */
 	public void listen() throws IOException{
 		while(true){
 			byte[] recvData = this.receive();
-			System.out.println("listen1");
 			if(recvData != null){
 				RTPHeader tmp = this.getHeader(recvData);
 				if(conFlag == 0) {
@@ -157,53 +180,68 @@ public class RTP {
 						conFlag = 2;
 						break;
 					} else {conFlag = 0; }
+				} else if (conFlag == 2) {
+					if(tmp.isFin()){
+						this.sendAck();
+						header.setFin(true);
+						this.send(null);
+						conFlag = 3;
+					} 
+				} else if (conFlag == 3){
+					if(tmp.isAck()){
+						conFlag = 0;
+						break;
+					} else {conFlag = 0; }
 				}
 			}
 		}
 	}
 	
 	public void sendFile(FileInputStream fileIn) throws IOException{
-		byte[] buffer = new byte[RTP.BUFFERMAX - RTPHeader.headerLen];
-		int payloadLen = fileIn.read(buffer);
-		byte[] payload;
-		
-		while( payloadLen != -1){
-			if(window.getNextToSend() <= window.getEndWindow()){
-				payload =  new byte[payloadLen];
-				System.arraycopy(buffer, 0, payload, 0, payloadLen);
-				int seq = window.getNextToSend();
-				header.setSeqNum(seq);
-				this.send(payload);
-				seq++;
-				window.setNextToSend(seq);
-				payloadLen = fileIn.read(buffer);
-			}
+		if(conFlag == 2) {
+			byte[] buffer = new byte[RTP.BUFFERMAX - RTPHeader.headerLen];
+			int payloadLen = fileIn.read(buffer);
+			byte[] payload;
 			
-			byte[] recvData = this.receive();
-			RTPHeader tmp = this.getHeader(recvData);
-			if(tmp.getAckNum() == window.getStartWindow()){
-				window.setStartWindow(window.getStartWindow()+1);
-				window.setEndWindow(window.getEndWindow()+1);
+			while( payloadLen != -1){
+				if(window.getNextToSend() <= window.getEndWindow()){
+					payload =  new byte[payloadLen];
+					System.arraycopy(buffer, 0, payload, 0, payloadLen);
+					int seq = window.getNextToSend();
+					header.setSeqNum(seq);
+					this.send(payload);
+					seq++;
+					window.setNextToSend(seq);
+					payloadLen = fileIn.read(buffer);
+				}
+				
+				byte[] recvData = this.receive();
+				RTPHeader tmp = this.getHeader(recvData);
+				if(tmp.getAckNum() == window.getStartWindow()){
+					window.setStartWindow(window.getStartWindow()+1);
+					window.setEndWindow(window.getEndWindow()+1);
+				}
+				
 			}
-			
+			fileIn.close();
+		} else {
+			System.out.println("Please initialize connection first.");
 		}
-		fileIn.close();
 	}
 	
 	
 	public void send(byte[] data) throws IOException {
 		header.setAck(false);
 		byte[] dataWithHeader = packData(header.getHeader(), data);
-		System.out.println("send----" + header.getSourcePort());
+		System.out.println("send packet--" + header.getSourcePort());
 		sendPacket = new DatagramPacket(dataWithHeader, dataWithHeader.length,
 				serverAddress, emuPort);
 		socket.send(sendPacket);
-
 	}
 	
 	public void sendAck() throws IOException {
 		header.setAck(true);
-		System.out.println("sendAck----" + header.getSourcePort());
+		System.out.println("sendAck--" + header.getSourcePort());
 		sendPacket = new DatagramPacket(header.getHeader(), RTPHeader.headerLen,
 				serverAddress, emuPort);
 		socket.send(sendPacket);

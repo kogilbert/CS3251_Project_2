@@ -41,7 +41,9 @@ public class FTAServer {
 		// Server port num
 		int emuPort = Integer.parseInt(args[1]);
 		
-		RTP rtpProtocol = new RTP(serverAddress, emuPort, hostPort, hostPort-1);
+		int desPort =hostPort-1;
+		
+		RTP rtpProtocol = new RTP(serverAddress, emuPort, hostPort, desPort);
 		
 		
 		/**
