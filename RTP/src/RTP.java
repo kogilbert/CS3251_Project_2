@@ -146,22 +146,25 @@ public class RTP {
 	public void close() throws IOException{
 		header.setFin(true);
 		this.send(null);
-		try{
-			byte[] recvData = this.receive();
-			if(recvData != null){
-				RTPHeader tmp = this.getHeader(recvData);
-				if(conFlag == 2){
-					if(tmp.isAck()){
-						conFlag = 3;
-					}
-				} else if (conFlag == 3){
-					if (tmp.isFin()){
-						this.sendAck();
-						conFlag = 0;
+		while(true){
+		
+			try{
+				byte[] recvData = this.receive();
+				if(recvData != null){
+					RTPHeader tmp = this.getHeader(recvData);
+					if(conFlag == 2){
+						if(tmp.isAck()){
+							conFlag = 3;
+						}
+					} else if (conFlag == 3){
+						if (tmp.isFin()){
+							this.sendAck();
+							conFlag = 0;
+						}
 					}
 				}
-			}
-		}catch(SocketTimeoutException e){}
+			}catch(SocketTimeoutException e){}
+		}
 		
 		
 		System.out.println("Connection closed");
@@ -187,8 +190,9 @@ public class RTP {
 						} 
 						conFlag = 1;
 					} else if (conFlag == 1){
-						if(!tmp.isSyn()){
+						if(tmp.isSyn( == false){
 							conFlag = 2;
+							System.out.println("Connection established.");
 							break;
 						} else {conFlag = 0; }
 					} else if (conFlag == 2) {
@@ -201,8 +205,9 @@ public class RTP {
 					} else if (conFlag == 3){
 						if(tmp.isAck()){
 							conFlag = 0;
+							System.out.println("Connection closed.");
 							break;
-						} else {conFlag = 0; }
+						}
 					}
 				}
 			}catch(SocketTimeoutException e){
@@ -275,7 +280,7 @@ public class RTP {
 		recvPacket = new DatagramPacket(new byte[BUFFERMAX],
 				BUFFERMAX);
 		socket.receive(recvPacket);
-		System.out.println("Received packet from client at "
+		System.out.println("Received packet at "
 				+ recvPacket.getAddress().getHostAddress() + " on port "
 				+ recvPacket.getPort());
 		
@@ -286,7 +291,7 @@ public class RTP {
 			RTPHeader tmp = this.getHeader(actualRecvData);
 			int seq = tmp.getSeqNum();
 			header.setAckNum(seq);
-			System.out.println("Recv ack :" + tmp.getAckNum());
+			//System.out.println("Recv ack :" + tmp.getAckNum());
 		}
 		
 		

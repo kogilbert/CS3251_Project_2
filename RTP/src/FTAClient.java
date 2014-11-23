@@ -56,7 +56,7 @@ public class FTAClient {
 		
 		rtpProtocol.sendFile(fileIn);
 		
-		
+		//rtpProtocol.close();
 
 	}
 
