@@ -160,6 +160,7 @@ public class RTP {
 						if (tmp.isFin()){
 							this.sendAck();
 							conFlag = 0;
+							System.out.println("Connection closed");
 						}
 					}
 				}
@@ -167,7 +168,7 @@ public class RTP {
 		}
 		
 		
-		System.out.println("Connection closed");
+
 	}
 	
 	/**
@@ -190,7 +191,7 @@ public class RTP {
 						} 
 						conFlag = 1;
 					} else if (conFlag == 1){
-						if(tmp.isSyn( == false){
+						if(tmp.isSyn() == false){
 							conFlag = 2;
 							System.out.println("Connection established.");
 							break;
