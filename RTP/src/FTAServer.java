@@ -52,9 +52,9 @@ public class FTAServer {
 		
 		rtpProtocol.listen();
 
-		//String receFileName = "recvFile.txt";
+		String receFileName = "recvFile.txt";
 	
-		//rtpProtocol.recvFile(receFileName);
+		rtpProtocol.recvFile(receFileName);
 		
 //		@SuppressWarnings("resource")
 //		FileOutputStream fileOut =  new FileOutputStream(System.getProperty("user.dir") + "/" + receFileName, true);

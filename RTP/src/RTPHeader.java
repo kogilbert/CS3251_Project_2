@@ -92,10 +92,10 @@ public class RTPHeader {
 		if((byte)(header[14] & 0x8) == (byte)0x8){
 			this.psh = true;
 		}
-		if((byte)(header[14] & 0xF) == (byte)0x10){
+		if((byte)(header[14] & 0x10) == (byte)0x10){
 			this.ack = true;
 		}
-		if((byte)(header[14] & 0x10) == (byte)0x20){
+		if((byte)(header[14] & 0x20) == (byte)0x20){
 			this.urg = true;
 		}
 		this.checksum = (short)(header[15]<<8 | ((short)0 | 0xFF) & header[16]);

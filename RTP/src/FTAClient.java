@@ -50,13 +50,13 @@ public class FTAClient {
 		
 		rtpProtocol.connect();
 		
-//		String filename = args[2];
-//		
-//		FileInputStream fileIn = new FileInputStream(System.getProperty("user.dir") + "/" + filename);
-//		
-//		rtpProtocol.sendFile(fileIn);
+		String filename = args[2];
 		
-		rtpProtocol.close();
+		FileInputStream fileIn = new FileInputStream(System.getProperty("user.dir") + "/" + filename);
+		
+		rtpProtocol.sendFile(fileIn);
+		
+		//rtpProtocol.close();
 
 	}
 
