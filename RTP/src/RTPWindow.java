@@ -10,7 +10,7 @@ public class RTPWindow {
 	
 	public RTPWindow() {
 		super();
-		this.windowSize = 2;
+		this.windowSize = 5;
 		this.startWindow = 0;
 		this.endWindow = 0 + this.windowSize - 1;
 		this.nextToSend = 0;
