@@ -178,23 +178,27 @@ public class RTP {
 				} else if (conFlag == 1){
 					if(!tmp.isSyn()){
 						conFlag = 2;
-						break;
+						//break;
 					} else {conFlag = 0; }
 				} else if (conFlag == 2) {
 					if(tmp.isFin()){
 						this.sendAck();
 						header.setFin(true);
 						this.send(null);
+						System.out.println("conFlag == 3.");
 						conFlag = 3;
 					} 
 				} else if (conFlag == 3){
 					if(tmp.isAck()){
 						conFlag = 0;
+						System.out.println("conFlag close.");
 						break;
-					} else {conFlag = 0; }
+					} 
 				}
 			}
 		}
+		
+		System.out.println("Connection closed.");
 	}
 	
 	public void sendFile(FileInputStream fileIn) throws IOException{
