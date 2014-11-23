@@ -202,8 +202,12 @@ public class RTP {
 			byte[] buffer = new byte[RTP.BUFFERMAX - RTPHeader.headerLen];
 			int payloadLen = fileIn.read(buffer);
 			byte[] payload;
-			
+			RTPTimer timer = new RTPTimer();
+			timer.start();
 			while( payloadLen != -1){
+				if(timer.checkTimeout()){
+					window.setNextToSend(window.getStartWindow());
+				}
 				if(window.getNextToSend() <= window.getEndWindow()){
 					payload =  new byte[payloadLen];
 					System.arraycopy(buffer, 0, payload, 0, payloadLen);
@@ -218,6 +222,7 @@ public class RTP {
 				byte[] recvData = this.receive();
 				RTPHeader tmp = this.getHeader(recvData);
 				if(tmp.getAckNum() == window.getStartWindow()){
+					timer.start();
 					window.setStartWindow(window.getStartWindow()+1);
 					window.setEndWindow(window.getEndWindow()+1);
 				}
