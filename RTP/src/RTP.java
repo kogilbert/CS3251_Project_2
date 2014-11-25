@@ -131,26 +131,22 @@ public class RTP {
 //		return new DatagramSocket(port);
 //	}
 //	
-	synchronized public void connect() throws IOException{
-		socket.setSoTimeout(1000);
+	 public void connect() throws IOException{
+		socket.setSoTimeout(500);
 		header.setSyn(true);
 		header.setSeqNum(0);
 		this.send(null);
 		System.out.println("Send first msg[SYN=1].");
-		RTPTimer timer = new RTPTimer();
-		timer.start();
 		
 		while(conFlag != 2){
 			try{
 				byte[] recvData = this.receive();
 				if(recvData != null){
 					RTPHeader tmp = this.getHeader(recvData);
-					if(conFlag == 0) {
 						if(tmp.isAck()){
 							header.setSyn(false);
 							header.setSeqNum(1);
 							this.send(null);
-							timer.start();
 							System.out.println("Received first SYN ack, sending second msg[SYN=0].");
 							while(conFlag != 2){
 								try {
@@ -170,19 +166,16 @@ public class RTP {
 							}
 						}
 					}
-				}
 			} catch(SocketTimeoutException e) {
 				header.setSyn(true);
 				this.send(null);
 				System.out.println("Re-Send first msg[SYN=1].");
-				timer.start();
 			} 
 		}
-		
 		socket.setSoTimeout(0);
 	}
 	
-	synchronized public void close() throws IOException{
+	 public void close() throws IOException{
 		header.setFin(true);
 		header.setSeqNum(0);
 		this.send(null);
@@ -218,7 +211,7 @@ public class RTP {
 	 * 3 : closing wait 
 	 * @throws IOException
 	 */
-	synchronized public void listen() throws IOException{
+	 public void listen() throws IOException{
 		while(true){
 			byte[] recvData = this.receive();
 			if(recvData != null){
@@ -229,10 +222,12 @@ public class RTP {
 						this.setConFlag(1);
 					} 
 				} else if (conFlag == 1){
-					if(tmp.isSyn() == false){
+					if(!tmp.isSyn()){
 						this.setConFlag(2);
 						this.sendAck();
 						System.out.println("-------------------Connection established--------------------");
+					} else {
+						this.setConFlag(0);
 					}
 				} else if (conFlag == 2) {
 					if(tmp.isFin()){
@@ -240,18 +235,24 @@ public class RTP {
 						header.setFin(true);
 						this.send(null);
 						this.setConFlag(3);
-					} 
+					} else if (!tmp.isSyn()){
+						this.setConFlag(1);
+						System.out.println("-------------------Restablishing Connection--------------------");
+					}
 				} else if (conFlag == 3){
 					if(tmp.isAck()){
 						this.setConFlag(0);
 						System.out.println("-------------------Connection closed--------------------");
+					} else {
+						this.setConFlag(2);
 					}
 				}
 			}
 		}
 	}
 	
-	synchronized public void sendFile(FileInputStream fileIn) throws IOException{
+	 public void sendFile(FileInputStream fileIn) throws IOException{
+		socket.setSoTimeout(500);
 		if(conFlag == 2) {
 			byte[] buffer = new byte[RTP.BUFFERMAX - RTPHeader.headerLen];
 			int payloadLen = fileIn.read(buffer);
@@ -289,28 +290,31 @@ public class RTP {
 		} else {
 			System.out.println("Please initialize connection first.");
 		}
+		
+		socket.setSoTimeout(0);
 	}
 	
 	
-	synchronized public void send(byte[] data) throws IOException {
-		header.setAck(false);
+	 synchronized public void send(byte[] data) throws IOException {
+		
 		byte[] dataWithHeader = packData(header.getHeader(), data);
+		header.setAck(false);
 		System.out.println("Sending packet--" + "Seq Num:" + header.getSeqNum());
-		sendPacket = new DatagramPacket(dataWithHeader, dataWithHeader.length,
-				serverAddress, emuPort);
-		socket.send(sendPacket);
+		 sendPacket = new DatagramPacket(dataWithHeader, dataWithHeader.length,
+					serverAddress, emuPort);
+		 socket.send(sendPacket);
 	}
 	
-	synchronized public void sendAck() throws IOException {
-		header.setAck(true);
+	 synchronized public void sendAck() throws IOException {
 		System.out.println("SendingAck--" + "ACK Num:" + header.getAckNum());
-		sendPacket = new DatagramPacket(header.getHeader(), RTPHeader.headerLen,
-				serverAddress, emuPort);
-		socket.send(sendPacket);
+		 header.setAck(true);
+		 sendPacket = new DatagramPacket(header.getHeader(), RTPHeader.headerLen,
+				 serverAddress, emuPort);
+		 socket.send(sendPacket);
 	}
 	
 	
-	synchronized public byte[] receive() throws IOException{
+	 synchronized public byte[] receive() throws IOException{
 		recvPacket = new DatagramPacket(new byte[BUFFERMAX],
 				BUFFERMAX);
 		socket.receive(recvPacket);
@@ -324,9 +328,7 @@ public class RTP {
 			RTPHeader tmp = this.getHeader(actualRecvData);
 			int seq = tmp.getSeqNum();
 			header.setAckNum(seq);
-			//System.out.println("Recv ack :" + tmp.getAckNum());
 		}
-		
 		
 		// Once the datagram socket receive data the buffer will be reset to
 		// the length of the data it received.
@@ -335,7 +337,7 @@ public class RTP {
 		return actualRecvData;
 	}
 	
-	synchronized public void recvFile(String receFileName) throws IOException{
+	 public void recvFile(String receFileName) throws IOException{
 		if(conFlag == 2) {
 			FileOutputStream fileOut =  new FileOutputStream(System.getProperty("user.dir") + "/" + receFileName, true);
 			BufferedOutputStream outBuffer=  new BufferedOutputStream(fileOut);
@@ -369,7 +371,7 @@ public class RTP {
 	 * @param data data byte[]
 	 * @return result the single byte[] array
 	 */
-	synchronized static byte[] packData(byte[] header, byte[] data){
+	 static byte[] packData(byte[] header, byte[] data){
 		
 		if(data != null){
 			int headerLen = header.length;
@@ -394,7 +396,7 @@ public class RTP {
 	/**
 	 * Extract the header information from received RTP packet
 	 */
-	synchronized public RTPHeader getHeader(byte[] receiveData){
+	 public RTPHeader getHeader(byte[] receiveData){
 		RTPHeader header = new RTPHeader();
 		int headerLen = receiveData[4];
 		byte[] headerArray = new byte[headerLen];
@@ -407,7 +409,7 @@ public class RTP {
 	/**
 	 * Extract the data information from received RTP packet
 	 */
-	synchronized public byte[] getContentByte(byte[] receiveData){
+	 public byte[] getContentByte(byte[] receiveData){
 		int headerLen = receiveData[4];
 		byte[] content = new byte[receiveData.length - headerLen];
 		System.arraycopy(receiveData, headerLen, content, 0, receiveData.length - headerLen);
@@ -417,7 +419,7 @@ public class RTP {
 	/**
 	 * Convert the ASCII byte[] data into String 
 	 */
-	synchronized public String byteArrayToString(byte[] data){
+	public String byteArrayToString(byte[] data){
 		  StringBuilder buffer = new StringBuilder(data.length);
 		    for (int i = 0; i < data.length; ++ i) {
 		        if (data[i] < 0) throw new IllegalArgumentException();
