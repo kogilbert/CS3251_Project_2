@@ -26,8 +26,8 @@ public class FTAClient {
 		
 		System.out.println("Welcome to the client, type 'connect(Emulator IP, Emulator Port Number, Client Port Number)");
 		Scanner sc = new Scanner(System.in);
-		boolean notConnected= true;
-		while(notConnected){
+		boolean connected= false;
+		while(connected){
 			String input = sc.nextLine();
 			System.out.println("you inputed " + input);
 			if(input.contains("connect")){
@@ -45,12 +45,12 @@ public class FTAClient {
 				rtpProtocol = new RTP(serverAddress, emuPort, clientPort, desPort);
 				rtpProtocol.connect();
 
-				notConnected = false;
+				connected = true;
 			}
 		}
 
-
-		System.out.println("type 'postfile(filename) or getfile(filename)");
+		while(connected)
+		System.out.println("type 'postfile(filename), getfile(filename), or disconnect");
 		String input = sc.nextLine();
 		System.out.println("you inputed " + input);
 		
@@ -61,7 +61,7 @@ public class FTAClient {
 		} else if(input.contains("getfile")){
 			//get file stuff
 		}else if(input.contains("disconnect")){
-			//rtpProtocol.close();
+			rtpProtocol.close();
 		}
 		
 		
