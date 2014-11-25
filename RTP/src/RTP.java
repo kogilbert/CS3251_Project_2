@@ -131,7 +131,7 @@ public class RTP {
 //		return new DatagramSocket(port);
 //	}
 //	
-	synchronized public void connect() throws IOException{
+	public void connect() throws IOException{
 		socket.setSoTimeout(1000);
 		header.setSyn(true);
 		header.setSeqNum(0);
