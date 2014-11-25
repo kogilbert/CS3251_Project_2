@@ -47,7 +47,7 @@ public class FTAServer {
 		/**
 		 * Start sending and receiving data------------------------------------------------------------------------
 		 */
-
+//asdas
 		rtpProtocol.listen();
 		
 		while(true){
