@@ -17,7 +17,10 @@ public class FTAClient {
 	//576 - 20 -8 -16 = 531
 	
 	public static void main(String[] args) throws IOException {
+		
 		RTP rtpProtocol=null;
+		Scanner sc = new Scanner(System.in);
+		boolean connected= false;
 		
 		// lllegalArgumentException("Parameter(s)' <Server> <Word> [<Port>]");
 		if ((args.length < 3) || (args.length > 4)) {
@@ -33,11 +36,6 @@ public class FTAClient {
 		//Dest port
 		int desPort =clientPort+1;
 
-
-		
-
-		Scanner sc = new Scanner(System.in);
-		boolean connected= false;
 		
 		while(true){
 			while(!connected){
@@ -74,44 +72,5 @@ public class FTAClient {
 				}
 			}
 		}
-		
-		
-		
-		
-		/**
-		 * Set up user input parameters Port Number, Emulator IP, Emulator Port Number------------------------------
-		 */
-		/*
-		// Test for correct # of args throw new
-		// lllegalArgumentException("Parameter(s)' <Server> <Word> [<Port>]");
-		if ((args.length < 3) || (args.length > 4)) {
-			throw new IOException("Invalid Argument");
-		}
-*/
-		/*
-
-
-
-
-
-		
-		RTP rtpProtocol = new RTP(serverAddress, emuPort, clientPort, desPort);
-		
-
-		/**
-		 * Start sending and receiving data------------------------------------------------------------------------
-		 */
-		/*
-		rtpProtocol.connect();
-		
-		String filename = args[2];
-		
-		FileInputStream fileIn = new FileInputStream(System.getProperty("user.dir") + "/" + filename);
-		
-		rtpProtocol.sendFile(fileIn);
-		
-		//rtpProtocol.close();
-*/
 	}
-
 }
