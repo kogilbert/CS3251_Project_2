@@ -182,7 +182,7 @@ public class RTP {
 		socket.setSoTimeout(0);
 	}
 	
-	synchronized public void close() throws IOException{
+	public void close() throws IOException{
 		header.setFin(true);
 		header.setSeqNum(0);
 		this.send(null);
@@ -218,7 +218,7 @@ public class RTP {
 	 * 3 : closing wait 
 	 * @throws IOException
 	 */
-	synchronized public void listen() throws IOException{
+	public void listen() throws IOException{
 		while(true){
 			byte[] recvData = this.receive();
 			if(recvData != null){
