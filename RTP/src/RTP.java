@@ -49,7 +49,6 @@ public class RTP {
 		this.hostPort = hostPort;
 		this.destPort = destPort;
 		socket = new DatagramSocket(hostPort);
-		socket.setSoTimeout(1000);
 		header = new RTPHeader((short)hostPort, (short)destPort, 0, 0);
 		window = new RTPWindow();
 	}
@@ -121,19 +120,15 @@ public class RTP {
 //	}
 //	
 	public void connect() throws IOException{
+		socket.setSoTimeout(1000);
 		header.setSyn(true);
-		header.setSeqNum(header.getSeqNum() + 1);
+		header.setSeqNum(0);
 		this.send(null);
+		System.out.println("Send first msg[SYN=1].");
 		RTPTimer timer = new RTPTimer();
 		timer.start();
 		
-		while(true){
-			
-			if(timer.checkTimeout()){
-				header.setSyn(true);
-				this.send(null);
-				timer.start();
-			}
+		while(conFlag != 2){
 			try{
 				byte[] recvData = this.receive();
 				if(recvData != null){
@@ -141,61 +136,64 @@ public class RTP {
 					if(conFlag == 0) {
 						if(tmp.isAck()){
 							header.setSyn(false);
-							header.setSeqNum(header.getSeqNum() + 1);
+							header.setSeqNum(1);
 							this.send(null);
 							timer.start();
-							System.out.println("received first ack, sending sever message to establish connection");
-							while(true){
-								recvData = this.receive();
-								if(timer.checkTimeout()){
+							System.out.println("Received first SYN ack, sending second msg[SYN=0].");
+							while(conFlag != 2){
+								try {
+									recvData = this.receive();
+									if(recvData != null){
+										tmp = this.getHeader(recvData);
+										if(tmp.isAck() & tmp.getAckNum() == 1){
+											conFlag = 2;
+											System.out.println("-------------------Connection established--------------------");
+										}
+									}
+								} catch(SocketTimeoutException e) {
+									header.setSeqNum(1);
+									System.out.println("Re-Send s msg[SYN=0].");
 									this.send(null);
-									timer.start();
-								}
-								tmp = this.getHeader(recvData);
-								if(tmp.isAck() /*& tmp.getAckNum() == 1*/){
-									conFlag = 2;	
-									System.out.println("Connection established");
-									break;
 								}
 							}
 						}
 					}
 				}
-			}catch(SocketTimeoutException e){}
-			
-			if(conFlag == 2){
-				break;
-			}
+			} catch(SocketTimeoutException e) {
+				header.setSyn(true);
+				this.send(null);
+				System.out.println("Re-Send first msg[SYN=1].");
+				timer.start();
+			} 
 		}
-		
 	}
 	
 	public void close() throws IOException{
 		header.setFin(true);
+		header.setSeqNum(0);
 		this.send(null);
+		System.out.println("Send first msg[FIN=1].");
 		while(true){
-		
 			try{
 				byte[] recvData = this.receive();
 				if(recvData != null){
 					RTPHeader tmp = this.getHeader(recvData);
 					if(conFlag == 2){
-						if(tmp.isAck()){
+						if(tmp.isAck() & tmp.getAckNum() == 0){
+							System.out.println("Received first ACK.");
 							conFlag = 3;
 						}
 					} else if (conFlag == 3){
 						if (tmp.isFin()){
 							this.sendAck();
+							System.out.println("Received msg[FIN=1], sending back ACK.");
 							conFlag = 0;
-							System.out.println("Connection closed");
+							System.out.println("-------------------Connection closed--------------------");
 						}
 					}
 				}
 			}catch(SocketTimeoutException e){}
 		}
-		
-		
-
 	}
 	
 	/**
@@ -208,39 +206,36 @@ public class RTP {
 	 */
 	public void listen() throws IOException{
 		while(true){
-			try{
-				byte[] recvData = this.receive();
-				if(recvData != null){
-					RTPHeader tmp = this.getHeader(recvData);
-					if(conFlag == 0) {
-						if(tmp.isSyn()){
-							this.sendAck();
-						} 
-						conFlag = 1;
-					} else if (conFlag == 1){
-						if(tmp.isSyn() == false){
-							conFlag = 2;
-							this.sendAck();
-							System.out.println("Connection established.");
-							break;
-						} else {conFlag = 0; }
-					} else if (conFlag == 2) {
-						if(tmp.isFin()){
-							this.sendAck();
-							header.setFin(true);
-							this.send(null);
-							conFlag = 3;
-						} 
-					} else if (conFlag == 3){
-						if(tmp.isAck()){
-							conFlag = 0;
-							System.out.println("Connection closed.");
-							break;
-						}
+			byte[] recvData = this.receive();
+			if(recvData != null){
+				RTPHeader tmp = this.getHeader(recvData);
+				if(conFlag == 0) {
+					if(tmp.isSyn()){
+						this.sendAck();
+					} 
+					conFlag = 1;
+				} else if (conFlag == 1){
+					if(tmp.isSyn() == false){
+						conFlag = 2;
+						this.sendAck();
+						System.out.println("-------------------Connection established--------------------");
+						break;
+					} else {conFlag = 0; }
+				} else if (conFlag == 2) {
+					if(tmp.isFin()){
+						this.sendAck();
+						header.setFin(true);
+						this.send(null);
+						conFlag = 3;
+					} 
+				} else if (conFlag == 3){
+					if(tmp.isAck()){
+						conFlag = 0;
+						System.out.println("-------------------Connection closed--------------------");
+						break;
 					}
 				}
-			}catch(SocketTimeoutException e){}
-			
+			}
 		}
 	}
 	
@@ -288,7 +283,7 @@ public class RTP {
 	public void send(byte[] data) throws IOException {
 		header.setAck(false);
 		byte[] dataWithHeader = packData(header.getHeader(), data);
-		System.out.println("send packet--" + header.getSourcePort());
+		System.out.println("Sending packet--" + "Seq Num:" + header.getSeqNum());
 		sendPacket = new DatagramPacket(dataWithHeader, dataWithHeader.length,
 				serverAddress, emuPort);
 		socket.send(sendPacket);
@@ -296,7 +291,7 @@ public class RTP {
 	
 	public void sendAck() throws IOException {
 		header.setAck(true);
-		System.out.println("sendAck--" + header.getSourcePort());
+		System.out.println("SendingAck--" + "ACK Num:" + header.getAckNum());
 		sendPacket = new DatagramPacket(header.getHeader(), RTPHeader.headerLen,
 				serverAddress, emuPort);
 		socket.send(sendPacket);

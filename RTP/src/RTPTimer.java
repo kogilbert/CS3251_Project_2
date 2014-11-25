@@ -2,7 +2,7 @@
 public class RTPTimer {
 	
 	private long time;
-	public static final int TIMEOUT = 5;
+	public static final int TIMEOUT = 1;
 	
 	public RTPTimer() {
 		super();
@@ -19,7 +19,7 @@ public class RTPTimer {
 			return true;
 		}
 		else{
-			System.out.println("No timeout");
+			//System.out.println("No timeout");
 			return false;
 		}
 	}
