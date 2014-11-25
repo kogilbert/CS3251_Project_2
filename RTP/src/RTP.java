@@ -391,12 +391,6 @@ public class RTP {
 		}
 	}
 	
-	public void recvAckMsg(byte[] packet){
-		RTPHeader tmp = this.getHeader(packet);
-		System.out.println("Received ACK:" + tmp.getAckNum());
-		this.setAckSignal(true);
-	}
-	
 	 public void sendFile(FileInputStream fileIn) throws IOException{
 		if(conFlag == 2) {
 			byte[] buffer = new byte[RTP.BUFFERMAX - RTPHeader.headerLen];
@@ -427,18 +421,6 @@ public class RTP {
 					window.setNextToSend(seq+1);
 					payloadLen = fileIn.read(buffer);
 				}
-				
-//				try{
-//					byte[] recvData = this.receive();
-//					RTPHeader tmp = this.getHeader(recvData);
-//					if(tmp.getAckNum() == window.getStartWindow()){
-//						timer.start();
-//						window.setStartWindow(window.getStartWindow()+1);
-//						window.setEndWindow(window.getEndWindow()+1);
-//						packetBuffer.pop();
-//					}
-//				}catch(SocketTimeoutException e){}
-//							
 			}
 			fileIn.close();
 		} else {
@@ -464,82 +446,57 @@ public class RTP {
 		 socket.send(sendPacket);
 	}
 	
+//	
+//	 synchronized public byte[] receive() throws IOException{
+//		recvPacket = new DatagramPacket(new byte[BUFFERMAX],
+//				BUFFERMAX);
+//		socket.receive(recvPacket);
+//		byte[] actualRecvData = null;
+//		if(recvPacket.getData() != null){
+//			System.out.println("Received packet at "
+//					+ recvPacket.getAddress().getHostAddress() + " on port "
+//					+ recvPacket.getPort());
+//			actualRecvData = new byte[recvPacket.getLength()];
+//			System.arraycopy(recvPacket.getData(), 0, actualRecvData, 0, recvPacket.getLength());
+//			RTPHeader tmp = this.getHeader(actualRecvData);
+//			int seq = tmp.getSeqNum();
+//			header.setAckNum(seq);
+//		}
+//		
+//		// Once the datagram socket receive data the buffer will be reset to
+//		// the length of the data it received.
+//		// So we need to reset the buffer size back to the Maximum size
+//		recvPacket.setLength(BUFFERMAX);
+//		return actualRecvData;
+//	}
 	
-	 synchronized public byte[] receive() throws IOException{
-		recvPacket = new DatagramPacket(new byte[BUFFERMAX],
-				BUFFERMAX);
-		socket.receive(recvPacket);
-		byte[] actualRecvData = null;
-		if(recvPacket.getData() != null){
-			System.out.println("Received packet at "
-					+ recvPacket.getAddress().getHostAddress() + " on port "
-					+ recvPacket.getPort());
-			actualRecvData = new byte[recvPacket.getLength()];
-			System.arraycopy(recvPacket.getData(), 0, actualRecvData, 0, recvPacket.getLength());
-			RTPHeader tmp = this.getHeader(actualRecvData);
-			int seq = tmp.getSeqNum();
-			header.setAckNum(seq);
-		}
-		
-		// Once the datagram socket receive data the buffer will be reset to
-		// the length of the data it received.
-		// So we need to reset the buffer size back to the Maximum size
-		recvPacket.setLength(BUFFERMAX);
-		return actualRecvData;
-	}
-	
-	 public void recvFile(String receFileName) throws IOException{
-		if(conFlag == 2) {
-			FileOutputStream fileOut =  new FileOutputStream(System.getProperty("user.dir") + "/" + receFileName, true);
-			BufferedOutputStream outBuffer=  new BufferedOutputStream(fileOut);
-			
-			while(true){
-				if(this.isDataSignal()){
-					this.sendAck();
-					if(outBuffer != null){
-						byte[] payload = this.getContentByte(recvPacket.getData());
-						outBuffer.write(payload, 0, payload.length);
-						outBuffer.flush(); 
-						System.out.println("Write recvPacket to buffer.");
-					} else {
-						throw new IOException("outBuffer havent been initialized");
-						
-					}
-					
-					this.recvPacketFlush();
-					this.setDataSignal(false);
-				}
-			}
-			
-		} else {
-			System.out.println("Please initialize connection first.");
-		}
-			
+//	 public void recvFile(String receFileName) throws IOException{
+//		if(conFlag == 2) {
+//			FileOutputStream fileOut =  new FileOutputStream(System.getProperty("user.dir") + "/" + receFileName, true);
+//			BufferedOutputStream outBuffer=  new BufferedOutputStream(fileOut);
 //			
-//			
-//			//keeping listening potential incoming packet
 //			while(true){
-//				try{
-//					byte[] receiveData = this.receive();
-//					
-//					if(receiveData != null){
-//						RTPHeader recvHeader = this.getHeader(receiveData);
-//						byte[] payload = this.getContentByte(receiveData);
-//						this.sendAck();
-//						if(outBuffer != null){
-//							outBuffer.write(payload, 0, payload.length);
-//							outBuffer.flush(); 
-//						} else {
-//							throw new IOException("outBuffer havent been initialized");
-//							
-//						}
+//				if(this.isDataSignal()){
+//					this.sendAck();
+//					if(outBuffer != null){
+//						byte[] payload = this.getContentByte(recvPacket.getData());
+//						outBuffer.write(payload, 0, payload.length);
+//						outBuffer.flush(); 
+//						System.out.println("Write recvPacket to buffer.");
+//					} else {
+//						throw new IOException("outBuffer havent been initialized");
+//						
 //					}
-//				}catch(SocketTimeoutException e) {}
+//					
+//					this.recvPacketFlush();
+//					this.setDataSignal(false);
+//				}
 //			}
-//		}  else {
+//			
+//		} else {
 //			System.out.println("Please initialize connection first.");
 //		}
-	}
+//	}
 	
 	 synchronized public void recvPacketFlush(){
 		 recvPacket = new DatagramPacket(new byte[BUFFERMAX],
