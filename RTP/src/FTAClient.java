@@ -39,7 +39,7 @@ public class FTAClient {
 		
 		while(true){
 			while(!connected){
-				System.out.println("Welcome to the client, type 'connect");
+				System.out.println("Welcome to the client, type connect");
 				String input = sc.nextLine();
 				System.out.println("you inputed " + input);
 				if(input.contains("connect")){
@@ -50,7 +50,7 @@ public class FTAClient {
 			}
 	
 			while(connected){
-				System.out.println("type 'post filename, get filename, Window W, or disconnect");
+				System.out.println("type post filename, get filename, Window W, or disconnect");
 				String input = sc.nextLine();
 				System.out.println("you inputed " + input);
 				

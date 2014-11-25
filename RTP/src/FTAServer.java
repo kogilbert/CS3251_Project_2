@@ -1,5 +1,6 @@
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.Scanner;
 
 /* functions
 Start (Port num)
@@ -11,8 +12,16 @@ public class FTAServer {
 
 
 	public static void main(String[] args) throws IOException{
-//		System.out.println("Welcome to the server, type 'connect(Port Number)");
-//		Scanner sc = new Scanner(System.in);
+		System.out.println("Welcome to the server");
+		Scanner sc = new Scanner(System.in);
+		
+		// Test for correct # of args throw new
+		// lllegalArgumentException
+		if (args.length != 3) {
+			throw new IOException("Invalid Argument: server socket, emu IP, emu port");
+		}
+		
+		
 //		String input = sc.nextLine();
 //		System.out.println("you inputed " + input);
 //		
@@ -24,25 +33,13 @@ public class FTAServer {
 		/**
 		 * Set up user input parameters Server Port Number, Emulator IP, Emulator Port Number--------------------------
 		 */
-		
-		// Test for correct # of args throw new
-		// lllegalArgumentException("Parameter(s)' <Server> <Word> [<Port>]");
-		if (args.length != 3) {
-			throw new IOException("Invalid Argument");
-		}
-
-		int hostPort = Integer.parseInt(args[2]);
-
+		int hostPort = Integer.parseInt(args[0]);
 		// Server IP address
-		InetAddress serverAddress = InetAddress.getByName(args[0]);
-
+		InetAddress serverAddress = InetAddress.getByName(args[1]);
 		// Server port num
-		int emuPort = Integer.parseInt(args[1]);
-		
+		int emuPort = Integer.parseInt(args[2]);
 		int desPort =hostPort-1;
-		
-		RTP rtpProtocol = new RTP(serverAddress, emuPort, hostPort, desPort);
-		
+		RTP rtpProtocol = new RTP(serverAddress, emuPort, hostPort, desPort);	
 		
 		/**
 		 * Start sending and receiving data------------------------------------------------------------------------
@@ -50,7 +47,6 @@ public class FTAServer {
 		
 		Thread serverProtocol = new ServerThread(rtpProtocol);
 		serverProtocol.start();
-//		rtpProtocol.listen();
 		
 		while(true){
 			if(rtpProtocol.getConFlag() == 2){
