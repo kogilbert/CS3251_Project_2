@@ -49,17 +49,19 @@ public class FTAServer {
 		 * Start sending and receiving data------------------------------------------------------------------------
 		 */
 		
-		Thread serverProtocol = new ServerThread(rtpProtocol);
+		Thread serverProtocol = new ListenThread(rtpProtocol);
 		serverProtocol.start();
+		
+		
 //		rtpProtocol.listen();
 		
-		while(true){
-			if(rtpProtocol.getConFlag() == 2){
-				String receFileName = "recvFile.txt";
-				FileOutputStream fileOut =  new FileOutputStream(System.getProperty("user.dir") + "/" + receFileName, true);
-				rtpProtocol.recvFile(receFileName);
-			} 
-		}
+//		while(true){
+//			if(rtpProtocol.getConFlag() == 2){
+//				String receFileName = "recvFile.txt";
+//				FileOutputStream fileOut =  new FileOutputStream(System.getProperty("user.dir") + "/" + receFileName, true);
+//				rtpProtocol.recvFile(receFileName);
+//			} 
+//		}
 		
 //		@SuppressWarnings("resource")
 //		FileOutputStream fileOut =  new FileOutputStream(System.getProperty("user.dir") + "/" + receFileName, true);

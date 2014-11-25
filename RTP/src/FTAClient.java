@@ -47,6 +47,8 @@ public class FTAClient {
 		/**
 		 * Start sending and receiving data------------------------------------------------------------------------
 		 */
+		Thread listenProtocol = new ListenThread(rtpProtocol);
+		listenProtocol.start();
 		
 		rtpProtocol.connect();
 		

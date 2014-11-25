@@ -1,10 +1,10 @@
 import java.io.IOException;
 
 
-public class ServerThread extends Thread{
+public class ListenThread extends Thread{
 	RTP protocol;
 	
-	public ServerThread(RTP protocol){
+	public ListenThread(RTP protocol){
 		this.protocol = protocol;
 	}
 
