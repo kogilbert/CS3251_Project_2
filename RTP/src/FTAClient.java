@@ -1,6 +1,7 @@
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 /*
@@ -17,10 +18,10 @@ public class FTAClient {
 	//576 - 20 -8 -16 = 531
 	
 	public static void main(String[] args) throws IOException {
-		
 		RTP rtpProtocol=null;
 		Scanner sc = new Scanner(System.in);
 		boolean connected= false;
+		
 		
 		// lllegalArgumentException("Parameter(s)' <Server> <Word> [<Port>]");
 		if ((args.length < 3) || (args.length > 4)) {
