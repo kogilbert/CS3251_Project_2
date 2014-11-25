@@ -1,3 +1,4 @@
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 
@@ -55,6 +56,7 @@ public class FTAServer {
 		while(true){
 			if(rtpProtocol.getConFlag() == 2){
 				String receFileName = "recvFile.txt";
+				FileOutputStream fileOut =  new FileOutputStream(System.getProperty("user.dir") + "/" + receFileName, true);
 				rtpProtocol.recvFile(receFileName);
 			} 
 		}

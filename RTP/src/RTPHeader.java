@@ -6,9 +6,9 @@ public class RTPHeader {
 	int ackNum;
 	final static int headerLen = 17;
 	boolean urg;
-	boolean ack;
-	boolean psh;
-	boolean rst;
+	boolean ack; //	indicate this is an ACK
+	boolean dat; // indicate this is a data packet
+	boolean con; // indicate this is a connection packet
 	boolean syn;
 	boolean fin;
 	short checksum;
@@ -27,8 +27,8 @@ public class RTPHeader {
 		this.ackNum = ackNum;
 		this.urg = false;
 		this.ack = false;
-		this.psh = false;
-		this.rst = false;
+		this.dat = false;
+		this.con = false;
 		this.syn = false;
 		this.fin = false;
 		this.checksum = 0;
@@ -58,10 +58,10 @@ public class RTPHeader {
 		if (syn) {
 			this.header[14]= (byte)(this.header[14] | 0x2);
 		}
-		if (rst) {
+		if (con) {
 			this.header[14]= (byte)(this.header[14] | 0x4);
 		}
-		if (psh) {
+		if (dat) {
 			this.header[14]= (byte)(this.header[14] | 0x8);
 		}
 		if (ack) {
@@ -87,10 +87,10 @@ public class RTPHeader {
 			this.syn = true;
 		}
 		if((byte)(header[14] & 0x4) == (byte)0x4){
-			this.rst = true;
+			this.con = true;
 		}
 		if((byte)(header[14] & 0x8) == (byte)0x8){
-			this.psh = true;
+			this.dat = true;
 		}
 		if((byte)(header[14] & 0x10) == (byte)0x10){
 			this.ack = true;
@@ -158,20 +158,20 @@ public class RTPHeader {
 		this.ack = ack;
 	}
 
-	public boolean isPsh() {
-		return psh;
+	public boolean isDat() {
+		return dat;
 	}
 
-	public void setPsh(boolean psh) {
-		this.psh = psh;
+	public void setDat(boolean dat) {
+		this.dat = dat;
 	}
 
-	public boolean isRst() {
-		return rst;
+	public boolean isCon() {
+		return con;
 	}
 
-	public void setRst(boolean rst) {
-		this.rst = rst;
+	public void setCon(boolean con) {
+		this.con = con;
 	}
 
 	public boolean isSyn() {
