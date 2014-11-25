@@ -1,5 +1,3 @@
-import java.io.BufferedOutputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 
@@ -49,12 +47,17 @@ public class FTAServer {
 		/**
 		 * Start sending and receiving data------------------------------------------------------------------------
 		 */
-		
-		rtpProtocol.listen();
 
-		String receFileName = "recvFile.txt";
-	
-		rtpProtocol.recvFile(receFileName);
+		rtpProtocol.listen();
+		
+		while(true){
+			if(rtpProtocol.conFlag == 2){
+				String receFileName = "recvFile.txt";
+				rtpProtocol.recvFile(receFileName);
+			}
+
+		}
+
 		
 //		@SuppressWarnings("resource")
 //		FileOutputStream fileOut =  new FileOutputStream(System.getProperty("user.dir") + "/" + receFileName, true);

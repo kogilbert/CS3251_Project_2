@@ -7,6 +7,8 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class RTP {
 
@@ -166,6 +168,8 @@ public class RTP {
 				timer.start();
 			} 
 		}
+		
+		socket.setSoTimeout(0);
 	}
 	
 	public void close() throws IOException{
@@ -194,6 +198,14 @@ public class RTP {
 				}
 			}catch(SocketTimeoutException e){}
 		}
+	}
+	
+	public void printMsg() throws IOException{
+		header.setAck(true);
+		System.out.println("-------------------Connection established--------------------");
+		sendPacket = new DatagramPacket(header.getHeader(), RTPHeader.headerLen,
+				serverAddress, emuPort);
+		socket.send(sendPacket);
 	}
 	
 	/**
@@ -232,7 +244,7 @@ public class RTP {
 					if(tmp.isAck()){
 						conFlag = 0;
 						System.out.println("-------------------Connection closed--------------------");
-						break;
+						System.out.flush();
 					}
 				}
 			}
@@ -325,28 +337,29 @@ public class RTP {
 	}
 	
 	public void recvFile(String receFileName) throws IOException{
-		
-		FileOutputStream fileOut =  new FileOutputStream(System.getProperty("user.dir") + "/" + receFileName, true);
-		BufferedOutputStream outBuffer=  new BufferedOutputStream(fileOut);
-		
-		//keeping listening potential incoming packet
-		while(true){
-			try{
-				byte[] receiveData = this.receive();
-				
-				if(receiveData != null){
-					this.sendAck();
-					byte[] payload = this.getContentByte(receiveData);
-					if(outBuffer != null){
-						outBuffer.write(payload, 0, payload.length);
-						outBuffer.flush(); 
-					} else {
-						throw new IOException("outBuffer havent been initialized");
-						
+		if(conFlag == 2) {
+			FileOutputStream fileOut =  new FileOutputStream(System.getProperty("user.dir") + "/" + receFileName, true);
+			BufferedOutputStream outBuffer=  new BufferedOutputStream(fileOut);
+			//keeping listening potential incoming packet
+			while(true){
+				try{
+					byte[] receiveData = this.receive();
+					
+					if(receiveData != null){
+						this.sendAck();
+						byte[] payload = this.getContentByte(receiveData);
+						if(outBuffer != null){
+							outBuffer.write(payload, 0, payload.length);
+							outBuffer.flush(); 
+						} else {
+							throw new IOException("outBuffer havent been initialized");
+							
+						}
 					}
-				}
-			}catch(SocketTimeoutException e) {}
-			
+				}catch(SocketTimeoutException e) {}
+			}
+		}  else {
+			System.out.println("Please initialize connection first.");
 		}
 	}
 	
