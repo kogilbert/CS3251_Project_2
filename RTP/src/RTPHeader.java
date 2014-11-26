@@ -11,6 +11,8 @@ public class RTPHeader {
 	boolean con;
 	boolean syn;
 	boolean fin;
+	boolean get;
+	boolean post;
 	short checksum;
 	byte[] header;
 
@@ -31,6 +33,8 @@ public class RTPHeader {
 		this.con = false;
 		this.syn = false;
 		this.fin = false;
+		this.get = false;
+		this.post = false;
 		this.checksum = 0;
 		this.header = new byte[headerLen];
 	}
@@ -70,6 +74,12 @@ public class RTPHeader {
 		if (lst) {
 			this.header[14]= (byte)(this.header[14] | 0x20);
 		}
+		if (get) {
+			this.header[14]= (byte)(this.header[14] | 0x40);
+		}
+		if (post) {
+			this.header[14]= (byte)(this.header[14] | 0x80);
+		}
 		this.header[15] = (byte)(this.checksum >> 8);
 		this.header[16] = (byte)(this.checksum & 0xFF);
 		return this.header;
@@ -97,6 +107,12 @@ public class RTPHeader {
 		}
 		if((byte)(header[14] & 0x20) == (byte)0x20){
 			this.lst = true;
+		}
+		if((byte)(header[14] & 0x40) == (byte)0x40){
+			this.get = true;
+		}
+		if((byte)(header[14] & 0x80) == (byte)0x80){
+			this.post = true;
 		}
 		this.checksum = (short)(header[15]<<8 | ((short)0 | 0xFF) & header[16]);
 	}
@@ -188,6 +204,22 @@ public class RTPHeader {
 
 	public void setFin(boolean fin) {
 		this.fin = fin;
+	}
+
+	public boolean isGet() {
+		return get;
+	}
+
+	public void setGet(boolean get) {
+		this.get = get;
+	}
+
+	public boolean isPost() {
+		return post;
+	}
+
+	public void setPost(boolean post) {
+		this.post = post;
 	}
 
 	public short getChecksum() {

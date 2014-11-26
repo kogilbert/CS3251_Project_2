@@ -59,8 +59,8 @@ public class FTAClient {
 				
 				if(input.contains("post")){
 					String filename = input.substring(input.indexOf('t')+2);
-					FileInputStream fileIn = new FileInputStream(System.getProperty("user.dir") + "/" + filename);
-					rtpProtocol.sendFile(fileIn);	
+					//FileInputStream fileIn = new FileInputStream(System.getProperty("user.dir") + "/" + filename);
+					rtpProtocol.sendFile(filename);	
 				} else if(input.contains("get")){
 					String filename = input.substring(input.indexOf('t')+2);
 					//get file stuff

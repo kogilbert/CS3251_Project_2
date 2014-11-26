@@ -2,7 +2,7 @@
 public class RTPTimer {
 	
 	private long time;
-	public static final int TIMEOUT = 1;
+	public static final double TIMEOUT = 0.5;
 	
 	public RTPTimer() {
 		super();

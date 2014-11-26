@@ -14,7 +14,10 @@ public class LinkedQueue<T> implements Queue<T> {
         private Node next;
     }
 
-    public LinkedQueue() { }
+    public LinkedQueue() {
+    	first = null;
+    	last = null;
+    }
 
     public LinkedQueue<T> enqueue(T ele)
     {
@@ -33,7 +36,10 @@ public class LinkedQueue<T> implements Queue<T> {
         if (total == 0) throw new java.util.NoSuchElementException();
         T ele = first.ele;
         first = first.next;
-        if (--total == 0) last = null;
+        if (--total == 0){
+        	first = null;
+        	last = null;
+        }
         return ele;
     }
 
