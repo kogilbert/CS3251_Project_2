@@ -238,9 +238,6 @@ public class RTP {
 		 while(true){
 			 socket.receive(recvPacket);
 			 byte[] actualRecvData = null;
-			 System.out.println("Received packet at "
-					 + recvPacket.getAddress().getHostAddress() + " on port "
-					 + recvPacket.getPort());
 			 actualRecvData = new byte[recvPacket.getLength()];
 			 System.arraycopy(recvPacket.getData(), 0, actualRecvData, 0, recvPacket.getLength());
 			 RTPHeader tmp = this.getHeader(actualRecvData);
@@ -268,6 +265,7 @@ public class RTP {
 		header.setAckNum(seq);
 		if(this.getConFlag() == 0) {
 			if(tmp.isSyn()){
+				System.out.println("Received connection initializing msg [SYN=1]");
 				header.setCon(true);
 				this.sendAck();
 				this.setConFlag(1);
@@ -281,7 +279,7 @@ public class RTP {
 				this.setConFlag(1);
 			}
 			
-			else if(!tmp.isFin()){
+			else if(!tmp.isFin() && !tmp.isAck()){
 				header.setCon(true);
 				this.sendAck();
 				header.setCon(false);
@@ -302,6 +300,7 @@ public class RTP {
 			}
 		} else if (this.getConFlag() == 2) {
 			if(tmp.isFin()){
+				System.out.println("Received connection closing msg [FIN=1]");
 				header.setCon(true);
 				this.sendAck();
 				this.setConFlag(3);
@@ -315,7 +314,7 @@ public class RTP {
 				this.setConFlag(3);
 			}
 			
-			else if(!tmp.isSyn()){
+			else if(!tmp.isSyn() && !tmp.isAck()){
 				header.setCon(true);
 				this.sendAck();
 				header.setCon(false);
@@ -348,6 +347,7 @@ public class RTP {
 	synchronized public void recvDataMsg(byte[] packet) throws IOException{
 		RTPHeader tmp = this.getHeader(packet);
 		if(tmp.isAck()){
+			System.out.println("Received ACK Packet --- ACK Num:" + tmp.getAckNum());
 			if(tmp.getAckNum() == window.getStartWindow()){
 				timer.start();
 				window.setStartWindow(window.getStartWindow()+1);
@@ -356,6 +356,7 @@ public class RTP {
 			}
 		} else {
 			if(outBuffer != null){
+				System.out.println("Received Data Packet --- Seq Num: " + tmp.getSeqNum());
 				if(recvFileIndex == tmp.getSeqNum()){
 					byte[] payload = this.getContentByte(packet);
 					outBuffer.write(payload, 0, payload.length);
@@ -363,6 +364,7 @@ public class RTP {
 					recvFileIndex++;
 					if(tmp.isLst()){
 						fileOut.close();
+						System.out.println("-------File is succesfully received.-------" );
 					}
 				}
 				 header.setDat(true);
@@ -472,6 +474,7 @@ public class RTP {
 			fileIn.close();
 			this.setPostFlag(0);
 			header.setLst(false);
+			System.out.println("-------File " + filename + " has been succesfully transimtted.-------" );
 		} else {
 			System.out.println("Please initialize connection first.");
 		}

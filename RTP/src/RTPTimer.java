@@ -15,7 +15,7 @@ public class RTPTimer {
 	
 	public boolean checkTimeout(){
 		if(System.currentTimeMillis() - this.time > 1000 * TIMEOUT){
-			System.out.println("timeout");
+			System.out.println("--------Timeout--------");
 			return true;
 		}
 		else{
