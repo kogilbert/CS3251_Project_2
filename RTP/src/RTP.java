@@ -193,13 +193,6 @@ public class RTP {
 			}
 		}
 		
-		/* Sending second msg SYN = 0 */
-		header.setSyn(false);
-		header.setSeqNum(1);
-		this.send(null);
-		System.out.println("Received first SYN ack, sending second msg[SYN=0].");
-		timer.start();
-		
 		while(this.getConFlag() == 1){
 			if(timer.checkTimeout()){
 				header.setSyn(false);
@@ -234,13 +227,6 @@ public class RTP {
 			}
 		}
 		
-		/* Sending second msg FIN = 0 */
-		header.setFin(false);
-		header.setSeqNum(1);
-		this.send(null);
-		System.out.println("Received first FIN ack, sending second msg[FIN=0].");
-		timer.start();
-		
 		while(this.getConFlag() == 3){
 			if(timer.checkTimeout()){
 				header.setFin(false);
@@ -250,7 +236,7 @@ public class RTP {
 				timer.start();
 			} 
 		}
-		socket.close();
+		
 		header.setCon(false);
 		System.out.println("-------------------Connection closed--------------------");
 		
@@ -299,7 +285,7 @@ public class RTP {
 				this.setConFlag(1);
 			} 
 			//Client Side
-			else if(tmp.isAck()){
+			else if(tmp.isAck()  && header.isSyn()){
 				header.setSyn(false);
 				header.setSeqNum(1);
 				this.send(null);
@@ -330,7 +316,7 @@ public class RTP {
 			if(tmp.isFin()){
 				header.setCon(true);
 				this.sendAck();
-				this.setConFlag(1);
+				this.setConFlag(3);
 			} 
 			//Client Side
 			else if(tmp.isAck() && header.isFin()){
@@ -354,11 +340,11 @@ public class RTP {
 				header.setCon(false);
 				System.out.println("-------------------Connection closed--------------------");
 			}
-			if(tmp.isFin()){
+			else if(tmp.isFin()){
 				this.setConFlag(2);
 			}
 			// Client side
-			if(tmp.isAck()) {
+			else if(tmp.isAck()) {
 				this.setConFlag(0);
 			}
 		}

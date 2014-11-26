@@ -36,7 +36,7 @@ public class FTAClient {
 		//Dest port
 		int desPort =clientPort+1;
 		
-
+		Thread clientProtocol = null;
 		
 		while(true){
 			while(!connected){
@@ -45,7 +45,7 @@ public class FTAClient {
 				System.out.println("you inputed " + input);
 				if(input.contains("connect")){
 					rtpProtocol = new RTP(serverAddress, emuPort, clientPort, desPort);
-					Thread clientProtocol = new ServerThread(rtpProtocol);
+					clientProtocol = new ServerThread(rtpProtocol);
 					clientProtocol.start();
 					rtpProtocol.connect();
 					connected = true;
@@ -70,8 +70,9 @@ public class FTAClient {
 					
 				}else if(input.contains("disconnect")){
 					rtpProtocol.close();
+					clientProtocol.stop();
+					rtpProtocol.getSocket().close();
 					connected = false;
-
 				}
 			}
 		}
