@@ -45,7 +45,7 @@ public class FTAClient {
 				System.out.println("you inputed " + input);
 				if(input.contains("connect")){
 					rtpProtocol = new RTP(serverAddress, emuPort, clientPort, desPort);
-					clientProtocol = new ServerThread(rtpProtocol);
+					clientProtocol = new DataReceiveThread(rtpProtocol);
 					clientProtocol.start();
 					rtpProtocol.connect();
 					connected = true;

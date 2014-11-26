@@ -1,10 +1,10 @@
 import java.io.IOException;
 
 
-public class ServerThread extends Thread{
+public class DataReceiveThread extends Thread{
 	RTP protocol;
 	
-	public ServerThread(RTP protocol){
+	public DataReceiveThread(RTP protocol){
 		this.protocol = protocol;
 	}
 

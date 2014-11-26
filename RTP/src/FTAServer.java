@@ -45,7 +45,7 @@ public class FTAServer {
 		 * Start sending and receiving data------------------------------------------------------------------------
 		 */
 		
-		Thread serverProtocol = new ServerThread(rtpProtocol);
+		Thread serverProtocol = new DataReceiveThread(rtpProtocol);
 		serverProtocol.start();
 		
 		
