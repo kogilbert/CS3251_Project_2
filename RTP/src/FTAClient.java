@@ -1,7 +1,6 @@
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.ArrayList;
 import java.util.Scanner;
 
 /*
@@ -36,6 +35,7 @@ public class FTAClient {
 		int emuPort = Integer.parseInt(args[2]);
 		//Dest port
 		int desPort =clientPort+1;
+		
 
 		
 		while(true){
@@ -45,6 +45,8 @@ public class FTAClient {
 				System.out.println("you inputed " + input);
 				if(input.contains("connect")){
 					rtpProtocol = new RTP(serverAddress, emuPort, clientPort, desPort);
+					Thread clientProtocol = new ServerThread(rtpProtocol);
+					clientProtocol.start();
 					rtpProtocol.connect();
 					connected = true;
 				}
@@ -67,7 +69,7 @@ public class FTAClient {
 					//change window
 					
 				}else if(input.contains("disconnect")){
-					//rtpProtocol.close();
+					rtpProtocol.close();
 					connected = false;
 
 				}

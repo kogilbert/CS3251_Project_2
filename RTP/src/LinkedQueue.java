@@ -3,7 +3,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Queue;
 
-public class linkedQueue<T> implements Queue<T> {
+public class LinkedQueue<T> implements Queue<T> {
 
     private int total;
 
@@ -14,9 +14,9 @@ public class linkedQueue<T> implements Queue<T> {
         private Node next;
     }
 
-    public linkedQueue() { }
+    public LinkedQueue() { }
 
-    public linkedQueue<T> enqueue(T ele)
+    public LinkedQueue<T> enqueue(T ele)
     {
         Node current = last;
         last = new Node();
@@ -49,8 +49,8 @@ public class linkedQueue<T> implements Queue<T> {
         return sb.toString();
     }
     
-    public ArrayList returnArrayList(){
-    	ArrayList myList = new ArrayList();
+    public ArrayList<T> returnArrayList(){
+    	ArrayList<T> myList = new ArrayList<T>();
     	Node myNode = this.first;
     	
     	for(int i = 0; i < this.total; i++){
@@ -87,7 +87,7 @@ public class linkedQueue<T> implements Queue<T> {
 	@Override
 	public boolean isEmpty() {
 		// TODO Auto-generated method stub
-		return false;
+		return (first == null);
 	}
 
 	@Override

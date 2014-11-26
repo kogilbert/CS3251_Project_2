@@ -1,12 +1,13 @@
 import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
-import java.net.SocketTimeoutException;
+import java.util.Stack;
 
 public class RTP {
 
@@ -21,7 +22,19 @@ public class RTP {
 	DatagramPacket sendPacket;
 	DatagramPacket recvPacket;
 	RTPWindow window;
+	RTPTimer timer;
 	private int conFlag;
+	private Stack<byte[]> packetBuffer;
+	LinkedQueue<byte[]> queueBuffer;
+	private int recvFileIndex;
+	
+	
+	private boolean conSignal;
+	private boolean dataSignal;
+	private boolean ackSignal;
+	
+	BufferedOutputStream outBuffer;
+	FileOutputStream fileOut;
 	
 	/**
 	 * Default Constructor
@@ -36,15 +49,20 @@ public class RTP {
 		sendPacket = null;
 		recvPacket = null;
 		window = new RTPWindow();
+		timer = new RTPTimer();
 		conFlag = 0;
+		packetBuffer = new Stack<byte[]>();
+		queueBuffer = new LinkedQueue<byte[]>();
+		recvPacket = new DatagramPacket(new byte[BUFFERMAX],
+				BUFFERMAX);
 	}
 
 	
 	/**
 	 * Constructor for host
+	 * @throws FileNotFoundException 
 	 */
-	public RTP(InetAddress serverAddress, int emuPort, int hostPort, int destPort) throws SocketException {
-		super();
+	public RTP(InetAddress serverAddress, int emuPort, int hostPort, int destPort) throws SocketException, FileNotFoundException {
 		this.serverAddress = serverAddress;
 		this.emuPort = emuPort;
 		this.hostPort = hostPort;
@@ -52,7 +70,15 @@ public class RTP {
 		socket = new DatagramSocket(hostPort);
 		header = new RTPHeader((short)hostPort, (short)destPort, 0, 0);
 		window = new RTPWindow();
+		timer = new RTPTimer();
 		conFlag = 0;
+		packetBuffer = new Stack<byte[]>();
+		queueBuffer = new LinkedQueue<byte[]>();
+		
+		recvPacket = new DatagramPacket(new byte[BUFFERMAX],
+				BUFFERMAX);
+		fileOut =  new FileOutputStream(System.getProperty("user.dir") + "/" + "recvFile.txt", true);
+		outBuffer=  new BufferedOutputStream(fileOut);
 	}
 
 	public DatagramSocket getSocket() {
@@ -114,100 +140,120 @@ public class RTP {
 		this.conFlag = conFlag;
 	}
 	
+	public boolean isConSignal() {
+		return conSignal;
+	}
+
+
+	public void setConSignal(boolean conSignal) {
+		this.conSignal = conSignal;
+	}
+
+
+	synchronized public boolean isDataSignal() {
+		return dataSignal;
+	}
+
+
+	synchronized public void setDataSignal(boolean dataSignal) {
+		this.dataSignal = dataSignal;
+	}
+
+
+	public boolean isAckSignal() {
+		return ackSignal;
+	}
+
+
+	public void setAckSignal(boolean ackSignal) {
+		this.ackSignal = ackSignal;
+	}
+	
 //--------------------------------------------------Functions---------------------------------------------------------------//
 	
-	
 
 
-
-	///**
-// * Open the socket on the server side for listening.
-// * @param port, server port number
-// * @return
-// * @throws SocketException
-// */
-//
-//	static DatagramSocket start(int port) throws SocketException{
-//		return new DatagramSocket(port);
-//	}
-//	
-	public void connect() throws IOException{
-		socket.setSoTimeout(1000);
+	 public void connect() throws IOException{
+		header.setCon(true);
+		
+		 /* Sending initial msg SYN = 1 */
 		header.setSyn(true);
 		header.setSeqNum(0);
 		this.send(null);
-		System.out.println("Send first msg[SYN=1].");
-		RTPTimer timer = new RTPTimer();
 		timer.start();
+		System.out.println("Send first msg[SYN=1].");
 		
-		while(conFlag != 2){
-			try{
-				byte[] recvData = this.receive();
-				if(recvData != null){
-					RTPHeader tmp = this.getHeader(recvData);
-					if(conFlag == 0) {
-						if(tmp.isAck()){
-							header.setSyn(false);
-							header.setSeqNum(1);
-							this.send(null);
-							timer.start();
-							System.out.println("Received first SYN ack, sending second msg[SYN=0].");
-							while(conFlag != 2){
-								try {
-									recvData = this.receive();
-									if(recvData != null){
-										tmp = this.getHeader(recvData);
-										if(tmp.isAck() & tmp.getAckNum() == 1){
-											this.setConFlag(2);
-											System.out.println("-------------------Connection established--------------------");
-										}
-									}
-								} catch(SocketTimeoutException e) {
-									header.setSeqNum(1);
-									System.out.println("Re-Send s msg[SYN=0].");
-									this.send(null);
-								}
-							}
-						}
-					}
-				}
-			} catch(SocketTimeoutException e) {
+		while(this.getConFlag() == 0){
+			if(timer.checkTimeout()){
 				header.setSyn(true);
+				header.setSeqNum(0);
 				this.send(null);
 				System.out.println("Re-Send first msg[SYN=1].");
+				timer.start();
+			}
+		}
+		
+		/* Sending second msg SYN = 0 */
+		header.setSyn(false);
+		header.setSeqNum(1);
+		this.send(null);
+		System.out.println("Received first SYN ack, sending second msg[SYN=0].");
+		timer.start();
+		
+		while(this.getConFlag() == 1){
+			if(timer.checkTimeout()){
+				header.setSyn(false);
+				header.setSeqNum(1);
+				this.send(null);
+				System.out.println("Re-Send first msg[SYN=0].");
 				timer.start();
 			} 
 		}
 		
-		socket.setSoTimeout(0);
+		header.setCon(false);
+		System.out.println("-------------------Connection established--------------------");
 	}
 	
-	public void close() throws IOException{
+	 public void close() throws IOException{
+		header.setCon(true);
+		
+		 /* Sending initial msg FIN = 1 */
 		header.setFin(true);
 		header.setSeqNum(0);
 		this.send(null);
 		System.out.println("Send first msg[FIN=1].");
-		while(true){
-			try{
-				byte[] recvData = this.receive();
-				if(recvData != null){
-					RTPHeader tmp = this.getHeader(recvData);
-					if(conFlag == 2){
-						if(tmp.isAck() & tmp.getAckNum() == 0){
-							System.out.println("Received first ACK.");
-							this.setConFlag(3);
-						}
-					} else if (conFlag == 3){
-						if (tmp.isFin()){
-							this.sendAck();
-							System.out.println("Received msg[FIN=1], sending back ACK.");
-							this.setConFlag(0);
-							System.out.println("-------------------Connection closed--------------------");
-						}
-					}
-				}
-			}catch(SocketTimeoutException e){}
+		timer.start();
+		
+		while(this.getConFlag() == 2) {
+			if(timer.checkTimeout()){
+				header.setFin(true);
+				header.setSeqNum(0);
+				this.send(null);
+				System.out.println("Re-Send first msg[FIN=1].");
+				timer.start();
+			}
 		}
+		
+		/* Sending second msg FIN = 0 */
+		header.setFin(false);
+		header.setSeqNum(1);
+		this.send(null);
+		System.out.println("Received first FIN ack, sending second msg[FIN=0].");
+		timer.start();
+		
+		while(this.getConFlag() == 3){
+			if(timer.checkTimeout()){
+				header.setFin(false);
+				header.setSeqNum(1);
+				this.send(null);
+				System.out.println("Re-Send first msg[FIN=0].");
+				timer.start();
+			} 
+		}
+		socket.close();
+		header.setCon(false);
+		System.out.println("-------------------Connection closed--------------------");
+		
 	}
 
 	/**
@@ -218,72 +264,177 @@ public class RTP {
 	 * 3 : closing wait 
 	 * @throws IOException
 	 */
-	public void listen() throws IOException{
-		while(true){
-			byte[] recvData = this.receive();
-			if(recvData != null){
-				RTPHeader tmp = this.getHeader(recvData);
-				if(conFlag == 0) {
-					if(tmp.isSyn()){
-						this.sendAck();
-						this.setConFlag(1);
-					} 
-				} else if (conFlag == 1){
-					if(tmp.isSyn() == false){
-						this.setConFlag(2);
-						this.sendAck();
-						System.out.println("-------------------Connection established--------------------");
-					}
-				} else if (conFlag == 2) {
-					if(tmp.isFin()){
-						this.sendAck();
-						header.setFin(true);
-						this.send(null);
-						this.setConFlag(3);
-					} 
-				} else if (conFlag == 3){
-					if(tmp.isAck()){
-						this.setConFlag(0);
-						System.out.println("-------------------Connection closed--------------------");
-					}
-				}
+	 public void listen() throws IOException{
+		 while(true){
+			 socket.receive(recvPacket);
+			 byte[] actualRecvData = null;
+			 System.out.println("Received packet at "
+					 + recvPacket.getAddress().getHostAddress() + " on port "
+					 + recvPacket.getPort());
+			 actualRecvData = new byte[recvPacket.getLength()];
+			 System.arraycopy(recvPacket.getData(), 0, actualRecvData, 0, recvPacket.getLength());
+			 RTPHeader tmp = this.getHeader(actualRecvData);
+			 
+			 if(tmp.isCon()){
+				 recvConMsg(actualRecvData);
+			 } else if(tmp.isDat()){
+				 recvDataMsg(actualRecvData);
+			 }
+		 }
+	}
+	 
+	/**
+	 * Handle received connection message
+	 * @param packet
+	 * @throws IOException
+	 */
+	public void recvConMsg(byte[] packet) throws IOException{
+		RTPHeader tmp = this.getHeader(packet);
+		int seq = tmp.getSeqNum();
+		header.setAckNum(seq);
+		if(this.getConFlag() == 0) {
+			if(tmp.isSyn()){
+				header.setCon(true);
+				this.sendAck();
+				this.setConFlag(1);
+			} 
+			//Client Side
+			else if(tmp.isAck()){
+				header.setSyn(false);
+				header.setSeqNum(1);
+				this.send(null);
+				System.out.println("Received first SYN ack, sending second msg[SYN=0].");
+				this.setConFlag(1);
+			}
+			
+			else if(!tmp.isFin()){
+				header.setCon(true);
+				this.sendAck();
+				header.setCon(false);
+			}
+		} else if (this.getConFlag()  == 1){
+			if(!tmp.isSyn() && !tmp.isAck()){
+				this.setConFlag(2);
+				this.sendAck();
+				header.setCon(false);
+				System.out.println("-------------------Connection established--------------------");
+			}
+			if(tmp.isSyn()){
+				this.setConFlag(0);
+			}
+			// Client side
+			if(tmp.isAck()) {
+				this.setConFlag(2);
+			}
+		} else if (this.getConFlag() == 2) {
+			if(tmp.isFin()){
+				header.setCon(true);
+				this.sendAck();
+				this.setConFlag(1);
+			} 
+			//Client Side
+			else if(tmp.isAck() && header.isFin()){
+				header.setFin(false);
+				header.setSeqNum(1);
+				this.send(null);
+				System.out.println("Received first FIN ack, sending second msg[FIN=0].");
+				this.setConFlag(3);
+			}
+			
+			else if(!tmp.isSyn()){
+				header.setCon(true);
+				this.sendAck();
+				header.setCon(false);
+			}
+			
+		} else if (this.getConFlag()  == 3){
+			if(!tmp.isFin() && !tmp.isAck()){
+				this.setConFlag(0);
+				this.sendAck();
+				header.setCon(false);
+				System.out.println("-------------------Connection closed--------------------");
+			}
+			if(tmp.isFin()){
+				this.setConFlag(2);
+			}
+			// Client side
+			if(tmp.isAck()) {
+				this.setConFlag(0);
 			}
 		}
+		
+		recvPacketFlush();
 	}
 	
-	synchronized public void sendFile(FileInputStream fileIn) throws IOException{
+	/**
+	 * Handle received data transmission message. 
+	 * @param packet
+	 * @throws IOException 
+	 */
+	synchronized public void recvDataMsg(byte[] packet) throws IOException{
+		RTPHeader tmp = this.getHeader(packet);
+		
+		if(tmp.isAck()){
+			if(tmp.getAckNum() == window.getStartWindow()){
+				timer.start();
+				window.setStartWindow(window.getStartWindow()+1);
+				window.setEndWindow(window.getEndWindow()+1);
+				queueBuffer.dequeue();
+			}
+		} else {
+			if(outBuffer != null){
+				if(recvFileIndex == tmp.getSeqNum() ){
+					System.out.println("write data");
+					byte[] payload = this.getContentByte(recvPacket.getData());
+					outBuffer.write(payload, 0, payload.length);
+					outBuffer.flush(); 
+					recvFileIndex++;
+				}
+				 header.setDat(true);
+				 int seq = tmp.getSeqNum();
+				 if(recvFileIndex > seq){
+					 header.setAckNum(seq);
+				 } else {
+					 header.setAckNum(recvFileIndex);
+				 }
+				 this.sendAck();
+			} else {
+				throw new IOException("outBuffer havent been initialized");
+			}
+		}
+		this.recvPacketFlush();
+	}
+	
+	 public void sendFile(FileInputStream fileIn) throws IOException{
 		if(conFlag == 2) {
 			byte[] buffer = new byte[RTP.BUFFERMAX - RTPHeader.headerLen];
 			int payloadLen = fileIn.read(buffer);
 			byte[] payload;
-			RTPTimer timer = new RTPTimer();
 			timer.start();
 			
-			while( payloadLen != -1){
+			while( payloadLen != -1 || !queueBuffer.isEmpty()){
 				if(timer.checkTimeout()){
 					window.setNextToSend(window.getStartWindow());
+					timer.start();
+					for(byte[] eachPacket: queueBuffer.returnArrayList()){
+						int seq = window.getNextToSend();
+						header.setSeqNum(seq);
+						header.setDat(true);
+						this.send(eachPacket);
+						window.setNextToSend(seq+1);
+					}
 				}
-				if(window.getNextToSend() <= window.getEndWindow()){
+				if(window.getNextToSend() <= window.getEndWindow() && payloadLen != -1){
 					payload =  new byte[payloadLen];
 					System.arraycopy(buffer, 0, payload, 0, payloadLen);
 					int seq = window.getNextToSend();
 					header.setSeqNum(seq);
+					header.setDat(true);
 					this.send(payload);
-					seq++;
-					window.setNextToSend(seq);
+					queueBuffer.enqueue(payload);
+					window.setNextToSend(seq+1);
 					payloadLen = fileIn.read(buffer);
 				}
-				
-				try{
-					byte[] recvData = this.receive();
-					RTPHeader tmp = this.getHeader(recvData);
-					if(tmp.getAckNum() == window.getStartWindow()){
-						timer.start();
-						window.setStartWindow(window.getStartWindow()+1);
-						window.setEndWindow(window.getEndWindow()+1);
-					}
-				}catch(SocketTimeoutException e){}
-							
 			}
 			fileIn.close();
 		} else {
@@ -292,76 +443,80 @@ public class RTP {
 	}
 	
 	
-	synchronized public void send(byte[] data) throws IOException {
-		header.setAck(false);
+	 synchronized public void send(byte[] data) throws IOException {
 		byte[] dataWithHeader = packData(header.getHeader(), data);
+		header.setAck(false);
 		System.out.println("Sending packet--" + "Seq Num:" + header.getSeqNum());
 		sendPacket = new DatagramPacket(dataWithHeader, dataWithHeader.length,
-				serverAddress, emuPort);
-		socket.send(sendPacket);
+					serverAddress, emuPort);
+		 socket.send(sendPacket);
 	}
 	
-	synchronized public void sendAck() throws IOException {
-		header.setAck(true);
+	 synchronized public void sendAck() throws IOException {
 		System.out.println("SendingAck--" + "ACK Num:" + header.getAckNum());
-		sendPacket = new DatagramPacket(header.getHeader(), RTPHeader.headerLen,
-				serverAddress, emuPort);
-		socket.send(sendPacket);
+		 header.setAck(true);
+		 sendPacket = new DatagramPacket(header.getHeader(), RTPHeader.headerLen,
+				 serverAddress, emuPort);
+		 socket.send(sendPacket);
 	}
 	
+//	
+//	 synchronized public byte[] receive() throws IOException{
+//		recvPacket = new DatagramPacket(new byte[BUFFERMAX],
+//				BUFFERMAX);
+//		socket.receive(recvPacket);
+//		byte[] actualRecvData = null;
+//		if(recvPacket.getData() != null){
+//			System.out.println("Received packet at "
+//					+ recvPacket.getAddress().getHostAddress() + " on port "
+//					+ recvPacket.getPort());
+//			actualRecvData = new byte[recvPacket.getLength()];
+//			System.arraycopy(recvPacket.getData(), 0, actualRecvData, 0, recvPacket.getLength());
+//			RTPHeader tmp = this.getHeader(actualRecvData);
+//			int seq = tmp.getSeqNum();
+//			header.setAckNum(seq);
+//		}
+//		
+//		// Once the datagram socket receive data the buffer will be reset to
+//		// the length of the data it received.
+//		// So we need to reset the buffer size back to the Maximum size
+//		recvPacket.setLength(BUFFERMAX);
+//		return actualRecvData;
+//	}
 	
-	synchronized public byte[] receive() throws IOException{
-		recvPacket = new DatagramPacket(new byte[BUFFERMAX],
-				BUFFERMAX);
-		socket.receive(recvPacket);
-		byte[] actualRecvData = null;
-		if(recvPacket.getData() != null){
-			System.out.println("Received packet at "
-					+ recvPacket.getAddress().getHostAddress() + " on port "
-					+ recvPacket.getPort());
-			actualRecvData = new byte[recvPacket.getLength()];
-			System.arraycopy(recvPacket.getData(), 0, actualRecvData, 0, recvPacket.getLength());
-			RTPHeader tmp = this.getHeader(actualRecvData);
-			int seq = tmp.getSeqNum();
-			header.setAckNum(seq);
-			//System.out.println("Recv ack :" + tmp.getAckNum());
-		}
-		
-		
-		// Once the datagram socket receive data the buffer will be reset to
-		// the length of the data it received.
-		// So we need to reset the buffer size back to the Maximum size
-		recvPacket.setLength(BUFFERMAX);
-		return actualRecvData;
-	}
+//	 public void recvFile(String receFileName) throws IOException{
+//		if(conFlag == 2) {
+//			FileOutputStream fileOut =  new FileOutputStream(System.getProperty("user.dir") + "/" + receFileName, true);
+//			BufferedOutputStream outBuffer=  new BufferedOutputStream(fileOut);
+//			
+//			while(true){
+//				if(this.isDataSignal()){
+//					this.sendAck();
+//					if(outBuffer != null){
+//						byte[] payload = this.getContentByte(recvPacket.getData());
+//						outBuffer.write(payload, 0, payload.length);
+//						outBuffer.flush(); 
+//						System.out.println("Write recvPacket to buffer.");
+//					} else {
+//						throw new IOException("outBuffer havent been initialized");
+//						
+//					}
+//					
+//					this.recvPacketFlush();
+//					this.setDataSignal(false);
+//				}
+//			}
+//			
+//		} else {
+//			System.out.println("Please initialize connection first.");
+//		}
+//	}
 	
-	synchronized public void recvFile(String receFileName) throws IOException{
-		if(conFlag == 2) {
-			FileOutputStream fileOut =  new FileOutputStream(System.getProperty("user.dir") + "/" + receFileName, true);
-			BufferedOutputStream outBuffer=  new BufferedOutputStream(fileOut);
-			//keeping listening potential incoming packet
-			while(true){
-				try{
-					byte[] receiveData = this.receive();
-					
-					if(receiveData != null){
-						this.sendAck();
-						byte[] payload = this.getContentByte(receiveData);
-						if(outBuffer != null){
-							outBuffer.write(payload, 0, payload.length);
-							outBuffer.flush(); 
-						} else {
-							throw new IOException("outBuffer havent been initialized");
-							
-						}
-					}
-				}catch(SocketTimeoutException e) {}
-			}
-		}  else {
-			System.out.println("Please initialize connection first.");
-		}
-	}
-	
+	 synchronized public void recvPacketFlush(){
+		 recvPacket = new DatagramPacket(new byte[BUFFERMAX],
+					BUFFERMAX);
+	 }
+	 
 	/**
 	 * Pack the header and data together into a single byte[] array 
 	 * so that we can send the data to the UDP socket
@@ -369,7 +524,7 @@ public class RTP {
 	 * @param data data byte[]
 	 * @return result the single byte[] array
 	 */
-	synchronized static byte[] packData(byte[] header, byte[] data){
+	 static byte[] packData(byte[] header, byte[] data){
 		
 		if(data != null){
 			int headerLen = header.length;
@@ -394,7 +549,7 @@ public class RTP {
 	/**
 	 * Extract the header information from received RTP packet
 	 */
-	synchronized public RTPHeader getHeader(byte[] receiveData){
+	 public RTPHeader getHeader(byte[] receiveData){
 		RTPHeader header = new RTPHeader();
 		int headerLen = receiveData[4];
 		byte[] headerArray = new byte[headerLen];
@@ -407,7 +562,7 @@ public class RTP {
 	/**
 	 * Extract the data information from received RTP packet
 	 */
-	synchronized public byte[] getContentByte(byte[] receiveData){
+	 public byte[] getContentByte(byte[] receiveData){
 		int headerLen = receiveData[4];
 		byte[] content = new byte[receiveData.length - headerLen];
 		System.arraycopy(receiveData, headerLen, content, 0, receiveData.length - headerLen);
@@ -417,7 +572,7 @@ public class RTP {
 	/**
 	 * Convert the ASCII byte[] data into String 
 	 */
-	synchronized public String byteArrayToString(byte[] data){
+	public String byteArrayToString(byte[] data){
 		  StringBuilder buffer = new StringBuilder(data.length);
 		    for (int i = 0; i < data.length; ++ i) {
 		        if (data[i] < 0) throw new IllegalArgumentException();

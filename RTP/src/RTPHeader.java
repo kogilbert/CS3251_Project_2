@@ -5,10 +5,10 @@ public class RTPHeader {
 	int seqNum;
 	int ackNum;
 	final static int headerLen = 17;
-	boolean urg;
+	boolean lst;
 	boolean ack;
-	boolean psh;
-	boolean rst;
+	boolean dat;
+	boolean con;
 	boolean syn;
 	boolean fin;
 	short checksum;
@@ -25,10 +25,10 @@ public class RTPHeader {
 		this.destPort = destPort;
 		this.seqNum = seqNum;
 		this.ackNum = ackNum;
-		this.urg = false;
+		this.lst = false;
 		this.ack = false;
-		this.psh = false;
-		this.rst = false;
+		this.dat = false;
+		this.con = false;
 		this.syn = false;
 		this.fin = false;
 		this.checksum = 0;
@@ -58,16 +58,16 @@ public class RTPHeader {
 		if (syn) {
 			this.header[14]= (byte)(this.header[14] | 0x2);
 		}
-		if (rst) {
+		if (con) {
 			this.header[14]= (byte)(this.header[14] | 0x4);
 		}
-		if (psh) {
+		if (dat) {
 			this.header[14]= (byte)(this.header[14] | 0x8);
 		}
 		if (ack) {
 			this.header[14]= (byte)(this.header[14] | 0x10);
 		}
-		if (urg) {
+		if (lst) {
 			this.header[14]= (byte)(this.header[14] | 0x20);
 		}
 		this.header[15] = (byte)(this.checksum >> 8);
@@ -87,16 +87,16 @@ public class RTPHeader {
 			this.syn = true;
 		}
 		if((byte)(header[14] & 0x4) == (byte)0x4){
-			this.rst = true;
+			this.con = true;
 		}
 		if((byte)(header[14] & 0x8) == (byte)0x8){
-			this.psh = true;
+			this.dat = true;
 		}
 		if((byte)(header[14] & 0x10) == (byte)0x10){
 			this.ack = true;
 		}
 		if((byte)(header[14] & 0x20) == (byte)0x20){
-			this.urg = true;
+			this.lst = true;
 		}
 		this.checksum = (short)(header[15]<<8 | ((short)0 | 0xFF) & header[16]);
 	}
@@ -142,12 +142,12 @@ public class RTPHeader {
 		this.ackNum = ackNum;
 	}
 
-	public boolean isUrg() {
-		return urg;
+	public boolean isLst() {
+		return lst;
 	}
 
-	public void setUrg(boolean urg) {
-		this.urg = urg;
+	public void setLst(boolean lst) {
+		this.lst = lst;
 	}
 
 	public boolean isAck() {
@@ -158,20 +158,20 @@ public class RTPHeader {
 		this.ack = ack;
 	}
 
-	public boolean isPsh() {
-		return psh;
+	public boolean isDat() {
+		return dat;
 	}
 
-	public void setPsh(boolean psh) {
-		this.psh = psh;
+	public void setDat(boolean dat) {
+		this.dat = dat;
 	}
 
-	public boolean isRst() {
-		return rst;
+	public boolean isCon() {
+		return con;
 	}
 
-	public void setRst(boolean rst) {
-		this.rst = rst;
+	public void setCon(boolean con) {
+		this.con = con;
 	}
 
 	public boolean isSyn() {

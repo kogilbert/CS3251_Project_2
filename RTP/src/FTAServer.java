@@ -48,12 +48,14 @@ public class FTAServer {
 		Thread serverProtocol = new ServerThread(rtpProtocol);
 		serverProtocol.start();
 		
-		while(true){
-			if(rtpProtocol.getConFlag() == 2){
-				String receFileName = "recvFile.txt";
-				rtpProtocol.recvFile(receFileName);
-			} 
-		}
+		
+
+//		while(true){
+//			if(rtpProtocol.getConFlag() == 2){
+//				String receFileName = "recvFile.txt";
+//				rtpProtocol.recvFile(receFileName);
+//			} 
+//		}
 		
 //		@SuppressWarnings("resource")
 //		FileOutputStream fileOut =  new FileOutputStream(System.getProperty("user.dir") + "/" + receFileName, true);
