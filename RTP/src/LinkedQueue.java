@@ -4,33 +4,54 @@ import java.util.Iterator;
 import java.util.Queue;
 
 public class LinkedQueue<T> implements Queue<T> {
-
+	
+	/**
+	 * The size of queue.
+	 */
     private int total;
-
+    
+    /**
+     * Head and tail node.
+     */
     private Node first, last;
 
+    
+    /**
+     * Node structure.
+     */
     private class Node {
         private T ele;
         private Node next;
     }
 
+    /**
+     * Constructor
+     */
     public LinkedQueue() {
     	first = null;
     	last = null;
     }
 
+    /**
+     * Add element into the end of queue.
+     * @param ele
+     * @return
+     */
     synchronized public LinkedQueue<T> enqueue(T ele)
     {
         Node current = last;
         last = new Node();
         last.ele = ele;
-
         if (total++ == 0) first = last;
         else current.next = last;
 
         return this;
     }
 
+    /**
+     * Get and remove the first node in the queue
+     * @return
+     */
     synchronized public T dequeue()
     {
         if (total == 0) throw new java.util.NoSuchElementException();

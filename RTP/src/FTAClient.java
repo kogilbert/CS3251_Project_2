@@ -4,18 +4,17 @@ import java.net.InetAddress;
 import java.util.Scanner;
 
 /*
- * function Connect (Port num, Emulator IP, Emulator Port num) 
+ * Functions:
+ * 
+ * Connect
  * Get File(File Name) 
  * Post File (File Name)
- *  Window (w) 
- *  Debug On/Off 
- *  Disconnect
+ * Window (w) 
+ * Disconnect
  */
 
 public class FTAClient {
 
-	//576 - 20 -8 -16 = 531
-	
 	public static void main(String[] args) throws IOException {
 		RTP rtpProtocol=null;
 		Scanner sc = new Scanner(System.in);

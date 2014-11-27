@@ -4,15 +4,25 @@ public class RTPTimer {
 	private long time;
 	public static final double TIMEOUT = 0.5;
 	
+	/**
+	 * Constructor
+	 */
 	public RTPTimer() {
 		super();
 		this.time = 0;
 	}
 	
+	/**
+	 * Set the timer to zero.
+	 */
 	public void start(){
 		this.time = System.currentTimeMillis();
 	}
 	
+	/**
+	 * Checks the timeout, return true if timeout.
+	 * @return 
+	 */
 	public boolean checkTimeout(){
 		if(System.currentTimeMillis() - this.time > 1000 * TIMEOUT){
 			//System.out.println("--------Timeout--------");
@@ -23,14 +33,13 @@ public class RTPTimer {
 			return false;
 		}
 	}
+	
+	/**
+	 * Get the time since the timer start in second.
+	 * @return
+	 */
 	public double getTime(){
 		return (double)((System.currentTimeMillis() - time)/1000);
 	}
 	
-	public void printTransTho(byte size, long time){
-		System.out.println("Transmission ThroughPut: " + size/(time*1024));
-	}
-	public void printTransTime(){
-		System.out.println("Transmission Time: " + (System.currentTimeMillis() - time)/1000);
-	}
 }

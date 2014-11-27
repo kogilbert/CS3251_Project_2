@@ -8,7 +8,9 @@ public class DataReceiveThread extends Thread{
 		this.protocol = protocol;
 	}
 
-
+	/**
+	 * Open a thread for listening all the incoming data.
+	 */
 	@Override
 	public void run() {
 		try {

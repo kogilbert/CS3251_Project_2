@@ -1,20 +1,20 @@
 
 public class RTPHeader {
-	short sourcePort;
-	short destPort;
-	int seqNum;
-	int ackNum;
-	final static int headerLen = 17;
-	boolean lst;
-	boolean ack;
-	boolean dat;
-	boolean con;
-	boolean syn;
-	boolean fin;
-	boolean get;
-	boolean post;
-	short checksum;
-	byte[] header;
+	short sourcePort;	//Source port number
+	short destPort;		//Destination port number
+	int seqNum;			//Sequence Number
+	int ackNum;			//ACK number
+	final static int headerLen = 16;	//header length
+	boolean lst;	//Flag for the last data in the file.
+	boolean ack;	//Flag for ACK
+	boolean dat;	//Flag for data of file
+	boolean con;	//Flag for connection data.
+	boolean syn;	//SYN flag for establishing connection
+	boolean fin;	//FIN flag for closing connection
+	boolean get;	//Flag for requesting get file.
+	boolean post;	//Flag for posting file.
+	short checksum;	//Checksum field
+	byte[] header;  // Byte array of header for sending.
 
 	public RTPHeader() {
 		super();
@@ -39,6 +39,10 @@ public class RTPHeader {
 		this.header = new byte[headerLen];
 	}
 	
+	/**
+	 * Return the byte array of all the information in header.
+	 * @return
+	 */
 	public byte[] setHeader(){
 		this.header[0] = (byte)(this.sourcePort >> 8);
 		this.header[1] = (byte)(this.sourcePort & 0xFF);
@@ -83,6 +87,11 @@ public class RTPHeader {
 		return this.header;
 	}
 	
+	
+	/**
+	 * Convert the byte array in to Header object.
+	 * @param header
+	 */
 	public void headerFromArray(byte[] header){
 		this.sourcePort = (short)(header[0]<<8 | ((short)0 | 0xFF) & header[1]);
 		this.destPort = (short)(header[2]<<8 | ((short)0 | 0xFF) & header[3]);

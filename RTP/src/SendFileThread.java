@@ -4,12 +4,15 @@ import java.io.IOException;
 public class SendFileThread extends Thread {
 	RTP protocol;
 	String filename;
+	
 	public SendFileThread(RTP protocol, String filename){
 		this.protocol = protocol;
 		this.filename = filename;
 	}
 
-
+	/**
+	 * Open a thread to send file.
+	 */
 	@Override
 	public void run() {
 		try {

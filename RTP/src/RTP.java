@@ -10,7 +10,7 @@ import java.net.SocketException;
 import java.util.ArrayList;
 
 public class RTP {
-
+	//576 - 20 -8 -16 = 531 max payload size
 	public static final int BUFFERMAX = 255;
 	
 	private DatagramSocket socket;
@@ -19,10 +19,10 @@ public class RTP {
 	private int hostPort;
 	private int destPort;
 	private RTPHeader header;
-	DatagramPacket sendPacket;
-	DatagramPacket recvPacket;
-	RTPWindow window;
-	RTPTimer timer;
+	private DatagramPacket sendPacket;
+	private DatagramPacket recvPacket;
+	private RTPWindow window;
+	private RTPTimer timer;
 	private int conFlag;
 	LinkedQueue<byte[]> queueBuffer;
 	private int recvFileIndex;
@@ -59,7 +59,7 @@ public class RTP {
 
 	
 	/**
-	 * Constructor for host
+	 * Constructor for host with inputs
 	 * @throws FileNotFoundException 
 	 */
 	public RTP(InetAddress serverAddress, int emuPort, int hostPort, int destPort) throws SocketException, FileNotFoundException {
@@ -169,10 +169,9 @@ public class RTP {
 	}
 //--------------------------------------------------Functions---------------------------------------------------------------//
 	
-	
-
-
-
+	/**
+	 * Initialize the attribute every time start a new connection.
+	 */
 	public void initialize() {
 		window = new RTPWindow();
 		timer = new RTPTimer();
@@ -185,6 +184,9 @@ public class RTP {
 		recvFileIndex = 0;
 	}
 	
+	/**
+	 * Establish connection with server.
+	 */
 	public void connect() throws IOException{
 		header.setCon(true);
 		
@@ -219,6 +221,10 @@ public class RTP {
 		System.out.println("-------------------Connection established--------------------");
 	}
 	
+	/**
+	 * Close connection.
+	 * @throws IOException
+	 */
 	 public void close() throws IOException{
 		header.setCon(true);
 		
@@ -475,7 +481,7 @@ public class RTP {
 	}
 	
 	/**
-	 * Post file to server.
+	 * Post file to the server.
 	 * 
 	 * @param filename
 	 * @throws IOException
@@ -553,8 +559,8 @@ public class RTP {
 			}
 			
 			double transTime = transTimer.getTime();
-			System.out.println("Transmission Time: " + transTime + "secs");
-			System.out.println("Transmission ThroughPut: " + (double)filesize/(transTime*1024) + "Kbps");
+			System.out.println("Transmission Time: " + transTime + " secs");
+			System.out.printf("Transmission ThroughPut: %.5f  Kbps\n",(double)filesize/(transTime*1024));
 			
 			fileIn.close();
 			this.setPostFlag(0);
@@ -567,7 +573,7 @@ public class RTP {
 	}
 	 
 	/**
-	* Post file to server.
+	* Get file from the server.
 	* 
 	* @param filename
 	* @throws IOException
@@ -601,7 +607,11 @@ public class RTP {
 		}
 	}
 	
-	
+	/**
+	 * Send Datagram through UDP.
+	 * @param data
+	 * @throws IOException
+	 */
 	 synchronized public void send(byte[] data) throws IOException {
 		header.setAck(false);
 		byte[] dataWithHeader = packData(header.getHeader(), data);
@@ -612,6 +622,10 @@ public class RTP {
 		socket.send(sendPacket);
 	}
 	
+	 /**
+	  * Send ACK through UDP.
+	  * @throws IOException
+	  */
 	 synchronized public void sendAck() throws IOException {
 		//System.out.println("SendingAck--" + "ACK Num:" + header.getAckNum());
 		 header.setAck(true);
@@ -621,6 +635,9 @@ public class RTP {
 		 socket.send(sendPacket);
 	}
 	
+	 /**
+	  * Flush the received data Package.
+	  */
 	 synchronized public void recvPacketFlush(){
 		 recvPacket = new DatagramPacket(new byte[BUFFERMAX],
 					BUFFERMAX);

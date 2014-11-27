@@ -1,5 +1,3 @@
-import java.io.FileInputStream;
-
 
 public class RTPWindow {
 	int windowSize;
@@ -7,7 +5,9 @@ public class RTPWindow {
 	int endWindow;
 	int nextToSend;
 	
-	
+	/**
+	 * Constructor
+	 */
 	public RTPWindow() {
 		super();
 		this.windowSize = 2;
@@ -16,34 +16,6 @@ public class RTPWindow {
 		this.nextToSend = 0;
 	}
 	
-	//for sending files
-	public void send(FileInputStream myFile){
-		//3 way handshake to initiate connection
-		
-		boolean finishedSending = false;
-		
-		while(!finishedSending){
-			
-			//if not all available window is sent, send next packet if latestSent <= endWindow, latestSent++
-			if(nextToSend <= endWindow){
-				
-				
-				nextToSend++;
-			}
-
-			
-			//if received ACK that is the beginning of window size move start and end window size
-			
-			//if timer times out then retransmit entire window from start window point
-			
-			//if last packet received set finished sending to true
-		}
-		
-	}
-
-
-
-
 	public int getNextToSend() {
 		return nextToSend;
 	}
