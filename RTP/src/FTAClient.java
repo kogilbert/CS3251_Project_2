@@ -19,7 +19,6 @@ public class FTAClient {
 	public static void main(String[] args) throws IOException {
 		RTP rtpProtocol=null;
 		Scanner sc = new Scanner(System.in);
-		boolean connected= false;
 		
 		
 		// lllegalArgumentException("Parameter(s)' <Server> <Word> [<Port>]");
@@ -37,44 +36,41 @@ public class FTAClient {
 		int desPort =clientPort+1;
 		
 		Thread clientProtocol = null;
-		
+		Thread sendThread = null;
 		while(true){
-			while(!connected){
-				System.out.println("Welcome to the client, type connect");
+				System.out.println("Type connect, post filename, get filename, Window W, or disconnect");
 				String input = sc.nextLine();
-				System.out.println("you inputed " + input);
-				if(input.contains("connect")){
+//				System.out.println("you inputed " + input);
+				
+				if(input.equals("connect")){
 					rtpProtocol = new RTP(serverAddress, emuPort, clientPort, desPort);
 					clientProtocol = new DataReceiveThread(rtpProtocol);
 					clientProtocol.start();
 					rtpProtocol.connect();
-					connected = true;
-				}
-			}
-	
-			while(connected){
-				System.out.println("type post filename, get filename, Window W, or disconnect");
-				String input = sc.nextLine();
-				System.out.println("you inputed " + input);
-				
-				if(input.contains("post")){
-					String filename = input.substring(input.indexOf('t')+2);
+				} else if(input.contains("post")){
+					String[] inputstring = input.split("\\s");
 					//FileInputStream fileIn = new FileInputStream(System.getProperty("user.dir") + "/" + filename);
-					rtpProtocol.sendFile(filename);	
+					sendThread = new SendFileThread(rtpProtocol,inputstring[1]);
+					sendThread.start();
 				} else if(input.contains("get")){
-					String filename = input.substring(input.indexOf('t')+2);
-					//get file stuff
+					String[] inputstring = input.split("\\s");
+					//String filename = input.substring(input.indexOf('t')+2);
+					rtpProtocol.getFile(inputstring[1]);	
 	
-				}else if(input.contains("window")){
+				} else if(input.contains("window")){
 					//change window
+					String[] inputstring = input.split("\\s");
+					int wsize = Integer.parseInt(inputstring[1]);
+					rtpProtocol.changeWinSize(wsize);
 					
-				}else if(input.contains("disconnect")){
+				} else if(input.equals("disconnect")){
 					rtpProtocol.close();
 					clientProtocol.stop();
+					if(sendThread != null){
+						sendThread.stop();
+					}
 					rtpProtocol.getSocket().close();
-					connected = false;
 				}
 			}
 		}
-	}
 }

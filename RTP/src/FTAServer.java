@@ -48,7 +48,27 @@ public class FTAServer {
 		Thread serverProtocol = new DataReceiveThread(rtpProtocol);
 		serverProtocol.start();
 		
-		
+		while(true){
+			System.out.println("Type connect, post filename, get filename, Window W, or disconnect");
+			String input = sc.nextLine();
+			
+			if(input.contains("window")){
+				//change window
+				String[] inputstring = input.split("\\s");
+				int wsize = Integer.parseInt(inputstring[1]);
+				rtpProtocol.changeWinSize(wsize);
+			} else if (input.equals("terminate")){
+				rtpProtocol.close();
+				serverProtocol.stop();
+				for(SendFileThread each: rtpProtocol.getThreadList()){
+					each.stop();
+				}
+				rtpProtocol.getSocket().close();
+				System.out.println("Server has been terminated.");
+				break;
+			}
+			
+		}
 
 //		while(true){
 //			if(rtpProtocol.getConFlag() == 2){

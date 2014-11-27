@@ -44,77 +44,75 @@ public class RTPHeader {
 		this.header[1] = (byte)(this.sourcePort & 0xFF);
 		this.header[2] = (byte)(this.destPort >> 8);
 		this.header[3] = (byte)(this.destPort & 0xFF);
-		this.header[4] = (byte)(RTPHeader.headerLen & 0xFF);
-		this.header[5] = (byte)(this.seqNum >> 24);
-		this.header[6] = (byte)(this.seqNum >> 16);		
-		this.header[7] = (byte)(this.seqNum >> 8);
-		this.header[8] = (byte)(this.seqNum & 0xFF);
-		this.header[9] = (byte)(this.ackNum >> 24);
-		this.header[10] = (byte)(this.ackNum >> 16);		
-		this.header[11] = (byte)(this.ackNum >> 8);
-		this.header[12] = (byte)(this.ackNum & 0xFF);
-		
+		this.header[4] = (byte)(this.seqNum >> 24);
+		this.header[5] = (byte)(this.seqNum >> 16);		
+		this.header[6] = (byte)(this.seqNum >> 8);
+		this.header[7] = (byte)(this.seqNum & 0xFF);
+		this.header[8] = (byte)(this.ackNum >> 24);
+		this.header[9] = (byte)(this.ackNum >> 16);		
+		this.header[10] = (byte)(this.ackNum >> 8);
+		this.header[11] = (byte)(this.ackNum & 0xFF);
+		this.header[12] = (byte)(RTPHeader.headerLen & 0xFF);
 		this.header[13] = 0;
-		this.header[14] = 0;
 		if (fin) {
-			this.header[14]= (byte)(this.header[14] | 0x1);
+			this.header[13]= (byte)(this.header[13] | 0x1);
 		}
 		if (syn) {
-			this.header[14]= (byte)(this.header[14] | 0x2);
+			this.header[13]= (byte)(this.header[13] | 0x2);
 		}
 		if (con) {
-			this.header[14]= (byte)(this.header[14] | 0x4);
+			this.header[13]= (byte)(this.header[13] | 0x4);
 		}
 		if (dat) {
-			this.header[14]= (byte)(this.header[14] | 0x8);
+			this.header[13]= (byte)(this.header[13] | 0x8);
 		}
 		if (ack) {
-			this.header[14]= (byte)(this.header[14] | 0x10);
+			this.header[13]= (byte)(this.header[13] | 0x10);
 		}
 		if (lst) {
-			this.header[14]= (byte)(this.header[14] | 0x20);
+			this.header[13]= (byte)(this.header[13] | 0x20);
 		}
 		if (get) {
-			this.header[14]= (byte)(this.header[14] | 0x40);
+			this.header[13]= (byte)(this.header[13] | 0x40);
 		}
 		if (post) {
-			this.header[14]= (byte)(this.header[14] | 0x80);
+			this.header[13]= (byte)(this.header[13] | 0x80);
 		}
-		this.header[15] = (byte)(this.checksum >> 8);
-		this.header[16] = (byte)(this.checksum & 0xFF);
+		this.header[14] = (byte)(this.checksum >> 8);
+		this.header[15] = (byte)(this.checksum & 0xFF);
 		return this.header;
 	}
 	
 	public void headerFromArray(byte[] header){
 		this.sourcePort = (short)(header[0]<<8 | ((short)0 | 0xFF) & header[1]);
 		this.destPort = (short)(header[2]<<8 | ((short)0 | 0xFF) & header[3]);
-		this.seqNum = (int)(header[5]<<24 | header[6] << 16 | header[7] << 8 | ((short)0 | 0xFF) & header[8]);
-		this.ackNum = (int)(header[9]<<24 | header[10] << 16 | header[11] << 8 | ((short)0 | 0xFF) & header[12]);
-		if((byte)(header[14] & 0x1) == (byte)0x1){
+		this.seqNum = (int)(header[4]<<24 | header[5] << 16 | header[6] << 8 | ((short)0 | 0xFF) & header[7]);
+		this.ackNum = (int)(header[8]<<24 | header[9] << 16 | header[10] << 8 | ((short)0 | 0xFF) & header[11]);
+		if((byte)(header[13] & 0x1) == (byte)0x1){
 			this.fin = true;
 		}
-		if((byte)(header[14] & 0x2) == (byte)0x2){
+		if((byte)(header[13] & 0x2) == (byte)0x2){
 			this.syn = true;
 		}
-		if((byte)(header[14] & 0x4) == (byte)0x4){
+		if((byte)(header[13] & 0x4) == (byte)0x4){
 			this.con = true;
 		}
-		if((byte)(header[14] & 0x8) == (byte)0x8){
+		if((byte)(header[13] & 0x8) == (byte)0x8){
 			this.dat = true;
 		}
-		if((byte)(header[14] & 0x10) == (byte)0x10){
+		if((byte)(header[13] & 0x10) == (byte)0x10){
 			this.ack = true;
 		}
-		if((byte)(header[14] & 0x20) == (byte)0x20){
+		if((byte)(header[13] & 0x20) == (byte)0x20){
 			this.lst = true;
 		}
-		if((byte)(header[14] & 0x40) == (byte)0x40){
+		if((byte)(header[13] & 0x40) == (byte)0x40){
 			this.get = true;
 		}
-		if((byte)(header[14] & 0x80) == (byte)0x80){
+		if((byte)(header[13] & 0x80) == (byte)0x80){
 			this.post = true;
 		}
-		this.checksum = (short)(header[15]<<8 | ((short)0 | 0xFF) & header[16]);
+		this.checksum = (short)(header[14]<<8 | ((short)0 | 0xFF) & header[15]);
 	}
 
 	public byte[] getHeader() {

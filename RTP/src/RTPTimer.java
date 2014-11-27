@@ -15,12 +15,22 @@ public class RTPTimer {
 	
 	public boolean checkTimeout(){
 		if(System.currentTimeMillis() - this.time > 1000 * TIMEOUT){
-			System.out.println("--------Timeout--------");
+			//System.out.println("--------Timeout--------");
 			return true;
 		}
 		else{
 			//System.out.println("No timeout");
 			return false;
 		}
+	}
+	public double getTime(){
+		return (double)((System.currentTimeMillis() - time)/1000);
+	}
+	
+	public void printTransTho(byte size, long time){
+		System.out.println("Transmission ThroughPut: " + size/(time*1024));
+	}
+	public void printTransTime(){
+		System.out.println("Transmission Time: " + (System.currentTimeMillis() - time)/1000);
 	}
 }

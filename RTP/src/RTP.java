@@ -7,7 +7,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
-import java.util.Stack;
+import java.util.ArrayList;
 
 public class RTP {
 
@@ -28,6 +28,8 @@ public class RTP {
 	private int recvFileIndex;
 	private int getFlag;
 	private int postFlag;
+	private RTPTimer transTimer;
+	private ArrayList<SendFileThread> threadList;
 	
 	BufferedOutputStream outBuffer;
 	FileOutputStream fileOut;
@@ -52,6 +54,7 @@ public class RTP {
 		queueBuffer = new LinkedQueue<byte[]>();
 		recvPacket = new DatagramPacket(new byte[BUFFERMAX],
 				BUFFERMAX);
+		transTimer = new RTPTimer();
 	}
 
 	
@@ -72,9 +75,10 @@ public class RTP {
 		getFlag = 0;
 		postFlag = 0;
 		queueBuffer = new LinkedQueue<byte[]>();
-		
 		recvPacket = new DatagramPacket(new byte[BUFFERMAX],
 				BUFFERMAX);
+		transTimer = new RTPTimer();
+		threadList = new ArrayList<SendFileThread>();
 	}
 
 	public DatagramSocket getSocket() {
@@ -119,11 +123,11 @@ public class RTP {
 		this.hostPort = hostPort;
 	}
 
-	public RTPHeader getHeader() {
+	synchronized public RTPHeader getHeader() {
 		return header;
 	}
 
-	public void setHeader(RTPHeader header) {
+	synchronized public void setHeader(RTPHeader header) {
 		this.header = header;
 	}
 
@@ -154,9 +158,33 @@ public class RTP {
 	synchronized public void setPostFlag(int postFlag) {
 		this.postFlag = postFlag;
 	}
+	
+	public ArrayList<SendFileThread> getThreadList() {
+		return threadList;
+	}
+
+
+	public void setThreadList(ArrayList<SendFileThread> threadList) {
+		this.threadList = threadList;
+	}
 //--------------------------------------------------Functions---------------------------------------------------------------//
 	
+	
 
+
+
+	public void initialize() {
+		window = new RTPWindow();
+		timer = new RTPTimer();
+		conFlag = 0;
+		getFlag = 0;
+		postFlag = 0;
+		queueBuffer = new LinkedQueue<byte[]>();
+		recvPacket = new DatagramPacket(new byte[BUFFERMAX],
+				BUFFERMAX);	
+		recvFileIndex = 0;
+	}
+	
 	public void connect() throws IOException{
 		header.setCon(true);
 		
@@ -223,7 +251,7 @@ public class RTP {
 		
 		header.setCon(false);
 		System.out.println("-------------------Connection closed--------------------");
-		
+		this.initialize();
 	}
 
 	/**
@@ -240,17 +268,21 @@ public class RTP {
 			 byte[] actualRecvData = null;
 			 actualRecvData = new byte[recvPacket.getLength()];
 			 System.arraycopy(recvPacket.getData(), 0, actualRecvData, 0, recvPacket.getLength());
-			 RTPHeader tmp = this.getHeader(actualRecvData);
-			 
-			 if(tmp.isCon()){
-				 recvConMsg(actualRecvData);
-			 } else if(tmp.isDat()){
-				 recvDataMsg(actualRecvData);
-			 } else if(tmp.isGet()){
-				 
-			 } else if(tmp.isPost()){
-				 recvPostMsg(actualRecvData);
+			 if(!this.checkChecksum(actualRecvData)){
+				//System.out.println("corrupted data"); 
+			 } else {
+				 RTPHeader tmp = this.getHeader(actualRecvData);
+				 if(tmp.isCon()){
+					 recvConMsg(actualRecvData);
+				 } else if(tmp.isGet()){
+					 recvGetMsg(actualRecvData);
+				 } else if(tmp.isPost()){
+					 recvPostMsg(actualRecvData);
+				 } else if(tmp.isDat()){
+					 recvDataMsg(actualRecvData);
+				 } 
 			 }
+			
 		 }
 	}
 	 
@@ -259,13 +291,13 @@ public class RTP {
 	 * @param packet
 	 * @throws IOException
 	 */
-	public void recvConMsg(byte[] packet) throws IOException{
+	 public void recvConMsg(byte[] packet) throws IOException{
 		RTPHeader tmp = this.getHeader(packet);
 		int seq = tmp.getSeqNum();
 		header.setAckNum(seq);
 		if(this.getConFlag() == 0) {
 			if(tmp.isSyn()){
-				System.out.println("Received connection initializing msg [SYN=1]");
+				//System.out.println("Received connection initializing msg [SYN=1]");
 				header.setCon(true);
 				this.sendAck();
 				this.setConFlag(1);
@@ -275,7 +307,7 @@ public class RTP {
 				header.setSyn(false);
 				header.setSeqNum(1);
 				this.send(null);
-				System.out.println("Received first SYN ack, sending second msg[SYN=0].");
+				//System.out.println("Received first SYN ack, sending second msg[SYN=0].");
 				this.setConFlag(1);
 			}
 			
@@ -290,9 +322,12 @@ public class RTP {
 				this.sendAck();
 				header.setCon(false);
 				System.out.println("-------------------Connection established--------------------");
+				System.out.flush();
 			}
-			if(tmp.isSyn()){
-				this.setConFlag(0);
+			if(tmp.isSyn() && tmp.getSeqNum() == 0){
+				header.setCon(true);
+				this.sendAck();
+				header.setCon(false);
 			}
 			// Client side
 			if(tmp.isAck()) {
@@ -300,7 +335,7 @@ public class RTP {
 			}
 		} else if (this.getConFlag() == 2) {
 			if(tmp.isFin()){
-				System.out.println("Received connection closing msg [FIN=1]");
+				//System.out.println("Received connection closing msg [FIN=1]");
 				header.setCon(true);
 				this.sendAck();
 				this.setConFlag(3);
@@ -310,7 +345,7 @@ public class RTP {
 				header.setFin(false);
 				header.setSeqNum(1);
 				this.send(null);
-				System.out.println("Received first FIN ack, sending second msg[FIN=0].");
+				//System.out.println("Received first FIN ack, sending second msg[FIN=0].");
 				this.setConFlag(3);
 			}
 			
@@ -326,9 +361,12 @@ public class RTP {
 				this.sendAck();
 				header.setCon(false);
 				System.out.println("-------------------Connection closed--------------------");
+				this.initialize();
 			}
-			else if(tmp.isFin()){
-				this.setConFlag(2);
+			else if(tmp.isFin() && tmp.getSeqNum() == 0){
+				header.setCon(true);
+				this.sendAck();
+				header.setCon(false);
 			}
 			// Client side
 			else if(tmp.isAck()) {
@@ -347,7 +385,7 @@ public class RTP {
 	synchronized public void recvDataMsg(byte[] packet) throws IOException{
 		RTPHeader tmp = this.getHeader(packet);
 		if(tmp.isAck()){
-			System.out.println("Received ACK Packet --- ACK Num:" + tmp.getAckNum());
+			//System.out.println("Received Data ACK Packet --- ACK Num:" + tmp.getAckNum());
 			if(tmp.getAckNum() == window.getStartWindow()){
 				timer.start();
 				window.setStartWindow(window.getStartWindow()+1);
@@ -356,7 +394,7 @@ public class RTP {
 			}
 		} else {
 			if(outBuffer != null){
-				System.out.println("Received Data Packet --- Seq Num: " + tmp.getSeqNum());
+				//System.out.println("Received Data Packet --- Seq Num: " + tmp.getSeqNum());
 				if(recvFileIndex == tmp.getSeqNum()){
 					byte[] payload = this.getContentByte(packet);
 					outBuffer.write(payload, 0, payload.length);
@@ -367,14 +405,16 @@ public class RTP {
 						System.out.println("-------File is succesfully received.-------" );
 					}
 				}
-				 header.setDat(true);
+				 
 				 int seq = tmp.getSeqNum();
 				 if(recvFileIndex > seq){
 					 header.setAckNum(seq);
 				 } else if(seq > recvFileIndex){
 					 header.setAckNum(recvFileIndex-1);
 				 }
+				 header.setDat(true);
 				 this.sendAck();
+				 header.setDat(false);
 			} else {
 				throw new IOException("outBuffer havent been initialized");
 			}
@@ -387,8 +427,26 @@ public class RTP {
 	 * @param packet
 	 * @throws IOException
 	 */
-	public void recvGetMsg(byte[] packet){
-		
+	public void recvGetMsg(byte[] packet) throws IOException{
+		RTPHeader tmp = this.getHeader(packet);
+		int seq = tmp.getSeqNum();
+		header.setAckNum(seq);
+		if(tmp.isAck()){
+			this.setGetFlag(1);
+		} else {
+			if(this.getGetFlag() == 0){
+				byte[] payload = this.getContentByte(packet);
+				String fileName = new String(payload);
+				this.setGetFlag(1);
+				SendFileThread sendThread = new SendFileThread(this, fileName);
+				threadList.add(sendThread);
+				sendThread.start();
+			}
+			header.setGet(true);
+			this.sendAck();
+			header.setGet(false);
+		}
+		recvPacketFlush();
 	}
 	
 	/**
@@ -408,22 +466,31 @@ public class RTP {
 				String fileName = new String(payload);
 				fileOut =  new FileOutputStream(System.getProperty("user.dir") + "/" + fileName, true);
 				outBuffer=  new BufferedOutputStream(fileOut);
-				recvFileIndex = 0;
 				header.setPost(true);
 				this.sendAck();
+				header.setPost(false);
 			}
 		}
+		recvPacketFlush();
 	}
 	
-	 public void sendFile(String filename) throws IOException{
+	/**
+	 * Post file to server.
+	 * 
+	 * @param filename
+	 * @throws IOException
+	 */
+	public void sendFile(String filename) throws IOException{
 		 if(conFlag == 2) {
 			//---------------- Initialize Post file -------------------
 			FileInputStream fileIn = new FileInputStream(System.getProperty("user.dir") + "/" + filename);
 			byte[] name = filename.getBytes();
+			
 			header.setPost(true);
 			header.setSeqNum(0);
 			this.send(name);
-			System.out.println("Sending Post initialize msg.");
+			header.setPost(false);
+			//System.out.println("Sending Post initialize msg.");
 			timer.start();
 			
 			while(this.getPostFlag() == 0){
@@ -431,32 +498,43 @@ public class RTP {
 					header.setPost(true);
 					header.setSeqNum(0);
 					this.send(name);
-					System.out.println("Re-send Post initialize msg.");
+					header.setPost(false);
+					//System.out.println("Re-send Post initialize msg.");
 					timer.start();
 				}
 			}
-			header.setPost(false);
 			
 			//---------------- Start sending file-------------------
+			transTimer.start();
+			int filesize = 0;
 			
 			byte[] buffer = new byte[RTP.BUFFERMAX - RTPHeader.headerLen];
 			int payloadLen = fileIn.read(buffer);
 			byte[] payload;
 			timer.start();
-			
 			while( payloadLen != -1 || !queueBuffer.isEmpty()){
 				if(timer.checkTimeout()){
 					window.setNextToSend(window.getStartWindow());
 					timer.start();
-					for(byte[] eachPacket: queueBuffer.returnArrayList()){
+					ArrayList<byte[]> queue =  queueBuffer.returnArrayList();
+					for(int i=0; i< queue.size(); i++){
+						if(payloadLen == -1){
+							if(i == (queue.size()-1)){
+								header.setLst(true);
+							}
+						}
 						int seq = window.getNextToSend();
 						header.setSeqNum(seq);
 						header.setDat(true);
-						this.send(eachPacket);
+						this.send(queue.get(i));
+						header.setDat(false);
+						header.setLst(false);
 						window.setNextToSend(seq+1);
 					}
 				}
 				if(window.getNextToSend() <= window.getEndWindow() && payloadLen != -1){
+					filesize += payloadLen;
+					
 					payload =  new byte[payloadLen];
 					System.arraycopy(buffer, 0, payload, 0, payloadLen);
 					payloadLen = fileIn.read(buffer);
@@ -467,14 +545,57 @@ public class RTP {
 					header.setSeqNum(seq);
 					header.setDat(true);
 					this.send(payload);
-					queueBuffer.enqueue(payload);
+					header.setDat(false);
+					header.setLst(false);
 					window.setNextToSend(seq+1);
+					queueBuffer.enqueue(payload);
 				}
 			}
+			
+			double transTime = transTimer.getTime();
+			System.out.println("Transmission Time: " + transTime + "secs");
+			System.out.println("Transmission ThroughPut: " + (double)filesize/(transTime*1024) + "Kbps");
+			
 			fileIn.close();
 			this.setPostFlag(0);
+			this.setGetFlag(0);
 			header.setLst(false);
 			System.out.println("-------File " + filename + " has been succesfully transimtted.-------" );
+		} else {
+			System.out.println("Please initialize connection first.");
+		}
+	}
+	 
+	/**
+	* Post file to server.
+	* 
+	* @param filename
+	* @throws IOException
+	*/
+	public void getFile(String filename) throws IOException{
+		if(conFlag == 2){
+			//---------------- Request Get file -------------------
+			byte[] name = filename.getBytes();
+			header.setGet(true);
+			header.setSeqNum(0);
+			this.send(name);
+			header.setGet(false);
+			//System.out.println("Sending Get initialize msg.");
+			timer.start();
+			
+			while(this.getGetFlag() == 0){
+				if(timer.checkTimeout()){
+					header.setGet(true);
+					header.setSeqNum(0);
+					this.send(name);
+					header.setGet(false);
+					//System.out.println("Re-send Get initialize msg.");
+					timer.start();
+				}
+			}
+			
+			//System.out.println("Start receiving file.");
+			//---------------- Start Getting file in the listening thread-------------------
 		} else {
 			System.out.println("Please initialize connection first.");
 		}
@@ -482,18 +603,20 @@ public class RTP {
 	
 	
 	 synchronized public void send(byte[] data) throws IOException {
-		byte[] dataWithHeader = packData(header.getHeader(), data);
 		header.setAck(false);
-		System.out.println("Sending packet--" + "Seq Num:" + header.getSeqNum());
+		byte[] dataWithHeader = packData(header.getHeader(), data);
+		dataWithHeader = this.addChecksum(dataWithHeader);
+		//System.out.println("Sending packet--" + "Seq Num:" + header.getSeqNum());
 		sendPacket = new DatagramPacket(dataWithHeader, dataWithHeader.length,
 					serverAddress, emuPort);
-		 socket.send(sendPacket);
+		socket.send(sendPacket);
 	}
 	
 	 synchronized public void sendAck() throws IOException {
-		System.out.println("SendingAck--" + "ACK Num:" + header.getAckNum());
+		//System.out.println("SendingAck--" + "ACK Num:" + header.getAckNum());
 		 header.setAck(true);
-		 sendPacket = new DatagramPacket(header.getHeader(), RTPHeader.headerLen,
+		 byte[] dataToSend = this.addChecksum(header.getHeader());
+		 sendPacket = new DatagramPacket(dataToSend, RTPHeader.headerLen,
 				 serverAddress, emuPort);
 		 socket.send(sendPacket);
 	}
@@ -537,7 +660,7 @@ public class RTP {
 	 */
 	 public RTPHeader getHeader(byte[] receiveData){
 		RTPHeader header = new RTPHeader();
-		int headerLen = receiveData[4];
+		int headerLen = receiveData[12];
 		byte[] headerArray = new byte[headerLen];
 		System.arraycopy(receiveData, 0, headerArray, 0, headerLen);
 		header.headerFromArray(headerArray);
@@ -549,7 +672,7 @@ public class RTP {
 	 * Extract the data information from received RTP packet
 	 */
 	 public byte[] getContentByte(byte[] receiveData){
-		int headerLen = receiveData[4];
+		int headerLen = receiveData[12];
 		byte[] content = new byte[receiveData.length - headerLen];
 		System.arraycopy(receiveData, headerLen, content, 0, receiveData.length - headerLen);
 		return content;
@@ -567,5 +690,90 @@ public class RTP {
 		    return buffer.toString();
 	}
 	
+	/**
+	 * Before send the packet, call this function the add checksum field.
+	 * @param packet
+	 * @return
+	 */
+	public byte[] addChecksum(byte[] packet){
+		int len = packet.length;
+		short[] words = new short[len/2];
+		
+		for(int i = 0; i+1 < len; i =i + 2){
+			if(i+1 >= len){
+
+				short a = (short) (((((int)(packet[i])) & 0x0000FFFF)<<8) | (int)0);
+				words[i/2]=a;
+			}else{
+				short a = (short) (((((int)(packet[i])) & 0x0000FFFF)<<8)  | (((int)(packet[i+1])) & 0x000000FF));
+				words[i/2]=a;
+			}
+		}
+		short checksum = 0;
+		//adding
+		for(int i = 0; i < words.length; i++){			
+			int tmp = ((int)checksum & 0x0000FFFF) + ((int)words[i] & 0x0000FFFF);
+			if((tmp & 0x10000) == 0x10000){
+				//System.out.println("overflow");
+				tmp++;
+			}
+			checksum = (short)tmp;
+		}
+		checksum = (short)(((int)checksum & 0x0000FFFF) ^ 0xFFFF);
+		packet[14] = (byte)(checksum>> 8);
+		packet[15] = (byte)(checksum& 0xFF);
+		return packet;
+	}
+	
+	/**
+	 * After received the packet call this function to check corruption.
+	 * @param packet
+	 * @return
+	 */
+	public boolean checkChecksum(byte[] packet){
+		boolean check = false;
+		int len = packet.length;
+		short[] words = new short[len/2];
+		
+		for(int i = 0; i+1 < len; i =i + 2){
+			if(i+1 >= len){
+
+				short a = (short) (((((int)(packet[i])) & 0x0000FFFF)<<8) | (int)0);
+				words[i/2]=a;
+			}else{
+				short a = (short) (((((int)(packet[i])) & 0x0000FFFF)<<8)  | (((int)(packet[i+1])) & 0x000000FF));
+				words[i/2]=a;
+			}
+		}
+		short checksum = 0;
+		//adding
+		for(int i = 0; i < words.length; i++){
+
+			int tmp = 0;
+			tmp = ((int)checksum & 0x0000FFFF) + ((int)words[i] & 0x0000FFFF);
+			if((tmp & 0x10000) == 0x10000){
+				//System.out.println("overflow");
+				tmp++;
+			}
+			checksum = (short)tmp;
+		}
+		if ((checksum & 0xFFFF) == 0xFFFF){
+			check = true;
+		}
+		return check;
+	}
+	
+	/**
+	 * Set the window size.
+	 * @param windowSize
+	 */
+	public void changeWinSize(int windowSize){
+		if(conFlag == 2){
+			this.window.setWindowSize(windowSize);
+			System.out.println("The window size has been changed to " + windowSize);
+		} else {
+			System.out.println("Please initialize connection first.");
+		}
+	}
 	
 }

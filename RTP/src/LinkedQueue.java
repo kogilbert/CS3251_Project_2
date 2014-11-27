@@ -19,7 +19,7 @@ public class LinkedQueue<T> implements Queue<T> {
     	last = null;
     }
 
-    public LinkedQueue<T> enqueue(T ele)
+    synchronized public LinkedQueue<T> enqueue(T ele)
     {
         Node current = last;
         last = new Node();
@@ -31,7 +31,7 @@ public class LinkedQueue<T> implements Queue<T> {
         return this;
     }
 
-    public T dequeue()
+    synchronized public T dequeue()
     {
         if (total == 0) throw new java.util.NoSuchElementException();
         T ele = first.ele;
